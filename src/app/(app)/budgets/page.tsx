@@ -104,20 +104,29 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
           </div>
         ) : (
           <div className="grid gap-3">
-            <div className="grid grid-cols-3 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground">Batas</p>
-                <Money value={total.limit} className="font-bold" />
+            <dl className="grid gap-2 text-sm sm:grid-cols-3 sm:gap-4">
+              <div className="flex items-baseline justify-between gap-3 sm:block">
+                <dt className="text-xs text-muted-foreground">Batas</dt>
+                <dd>
+                  <Money value={total.limit} className="text-base font-bold sm:text-lg" />
+                </dd>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Terpakai</p>
-                <Money value={total.spent} className="font-bold" />
+              <div className="flex items-baseline justify-between gap-3 sm:block">
+                <dt className="text-xs text-muted-foreground">Terpakai</dt>
+                <dd>
+                  <Money value={total.spent} className="text-base font-bold sm:text-lg" />
+                </dd>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">{total.remaining < 0 ? "Lebih" : "Sisa"}</p>
-                <Money value={Math.abs(total.remaining)} className={cn("font-bold", total.remaining < 0 ? "text-expense" : "text-income")} />
+              <div className="flex items-baseline justify-between gap-3 sm:block">
+                <dt className="text-xs text-muted-foreground">{total.remaining < 0 ? "Lebih" : "Sisa"}</dt>
+                <dd>
+                  <Money
+                    value={Math.abs(total.remaining)}
+                    className={cn("text-base font-bold sm:text-lg", total.remaining < 0 ? "text-expense" : "text-income")}
+                  />
+                </dd>
               </div>
-            </div>
+            </dl>
             <ProgressBar ratio={total.ratio} level={total.level} label={`Anggaran total: ${Math.round(total.ratio * 100)}% terpakai`} className="h-3" />
             <p className="text-xs text-muted-foreground">{Math.round(total.ratio * 100)}% terpakai</p>
             {total.level === "warning" && (
@@ -139,28 +148,31 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
           {rows.map(({ category, status, spent }) => (
             <li key={category.id} className="grid gap-2 py-3 first:pt-0 last:pb-0">
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{category.name}</p>
-                  <p className="tabular text-xs text-muted-foreground">
-                    {status.level === "none" ? (
-                      <>
-                        Terpakai <Money value={spent} />
-                      </>
-                    ) : (
-                      <>
-                        <Money value={status.spent} /> dari <Money value={status.limit} /> ·{" "}
-                        <span className={cn("font-semibold", LEVEL_CLS[status.level])}>
-                          {status.remaining < 0 ? "lebih " : "sisa "}
-                          <Money value={Math.abs(status.remaining)} />
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
+                <p className="min-w-0 flex-1 truncate text-sm font-medium">{category.name}</p>
+                {status.level !== "none" && (
+                  <span className={cn("tabular shrink-0 text-xs font-semibold", LEVEL_CLS[status.level])}>
+                    {Math.round(status.ratio * 100)}%
+                  </span>
+                )}
                 <SetBudgetButton periodType={type} categoryId={category.id} title={category.name} currentLimit={status.limit} />
               </div>
-              {status.level !== "none" && (
-                <ProgressBar ratio={status.ratio} level={status.level} label={`${category.name}: ${Math.round(status.ratio * 100)}% terpakai`} className="h-1.5" />
+              {status.level !== "none" ? (
+                <>
+                  <ProgressBar ratio={status.ratio} level={status.level} label={`${category.name}: ${Math.round(status.ratio * 100)}% terpakai`} className="h-1.5" />
+                  <div className="tabular flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-muted-foreground">
+                    <span>
+                      <Money value={status.spent} /> dari <Money value={status.limit} />
+                    </span>
+                    <span className={cn("font-semibold", LEVEL_CLS[status.level])}>
+                      {status.remaining < 0 ? "Lebih " : "Sisa "}
+                      <Money value={Math.abs(status.remaining)} />
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Belum ada batas · terpakai <Money value={spent} />
+                </p>
               )}
             </li>
           ))}
@@ -168,33 +180,61 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
       </SectionCard>
 
       <SectionCard title="Riwayat anggaran" description={`${HISTORY_COUNT[type]} ${type === "weekly" ? "minggu" : "bulan"} sebelumnya (anggaran total)`}>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-sm">
-            <thead className="text-left text-xs text-muted-foreground">
-              <tr>
-                <th scope="col" className="pb-2 font-medium">Periode</th>
-                <th scope="col" className="pb-2 text-right font-medium">Batas</th>
-                <th scope="col" className="pb-2 text-right font-medium">Terpakai</th>
-                <th scope="col" className="pb-2 text-right font-medium">Status</th>
+        <ul className="divide-y md:hidden">
+          {history.map((h) => (
+            <li key={h.start} className="grid gap-1.5 py-3 first:pt-0 last:pb-0">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-sm font-medium">
+                  {type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatMonthYear(h.start)}
+                </p>
+                <p className={cn("text-xs font-semibold", LEVEL_CLS[h.status.level])}>
+                  {LEVEL_TEXT[h.status.level]}
+                  {h.status.level !== "none" && ` (${Math.round(h.status.ratio * 100)}%)`}
+                </p>
+              </div>
+              {h.status.level !== "none" && (
+                <ProgressBar ratio={h.status.ratio} level={h.status.level} label={`${Math.round(h.status.ratio * 100)}% terpakai`} className="h-1.5" />
+              )}
+              <p className="tabular text-xs text-muted-foreground">
+                Terpakai <Money value={h.status.spent} />
+                {h.status.limit > 0 ? (
+                  <>
+                    {" "}
+                    dari <Money value={h.status.limit} />
+                  </>
+                ) : (
+                  " · tanpa batas"
+                )}
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        <table className="hidden w-full text-sm md:table">
+          <thead className="text-left text-xs text-muted-foreground">
+            <tr>
+              <th scope="col" className="pb-2 font-medium">Periode</th>
+              <th scope="col" className="pb-2 text-right font-medium">Batas</th>
+              <th scope="col" className="pb-2 text-right font-medium">Terpakai</th>
+              <th scope="col" className="pb-2 text-right font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {history.map((h) => (
+              <tr key={h.start}>
+                <td className="py-2.5">{type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatMonthYear(h.start)}</td>
+                <td className="py-2.5 text-right">{h.status.limit > 0 ? <Money value={h.status.limit} /> : "—"}</td>
+                <td className="py-2.5 text-right">
+                  <Money value={h.status.spent} />
+                </td>
+                <td className={cn("py-2.5 text-right text-xs font-semibold", LEVEL_CLS[h.status.level])}>
+                  {LEVEL_TEXT[h.status.level]}
+                  {h.status.level !== "none" && ` (${Math.round(h.status.ratio * 100)}%)`}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y">
-              {history.map((h) => (
-                <tr key={h.start}>
-                  <td className="py-2.5">{type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatMonthYear(h.start)}</td>
-                  <td className="py-2.5 text-right">{h.status.limit > 0 ? <Money value={h.status.limit} /> : "—"}</td>
-                  <td className="py-2.5 text-right">
-                    <Money value={h.status.spent} />
-                  </td>
-                  <td className={cn("py-2.5 text-right text-xs font-semibold", LEVEL_CLS[h.status.level])}>
-                    {LEVEL_TEXT[h.status.level]}
-                    {h.status.level !== "none" && ` (${Math.round(h.status.ratio * 100)}%)`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </SectionCard>
     </div>
   );
