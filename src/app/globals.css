@@ -1,26 +1,193 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-income: var(--income);
+  --color-income-soft: var(--income-soft);
+  --color-expense: var(--expense);
+  --color-expense-soft: var(--expense-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --background: oklch(0.985 0.004 95);
+  --foreground: oklch(0.2 0.01 95);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.01 95);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.01 95);
+  --primary: oklch(0.32 0.05 165);
+  --primary-foreground: oklch(0.985 0.004 95);
+  --secondary: oklch(0.955 0.008 95);
+  --secondary-foreground: oklch(0.28 0.02 95);
+  --muted: oklch(0.955 0.008 95);
+  --muted-foreground: oklch(0.5 0.015 95);
+  --accent: oklch(0.945 0.012 150);
+  --accent-foreground: oklch(0.28 0.04 165);
+  --destructive: oklch(0.55 0.21 27);
+  --border: oklch(0.91 0.008 95);
+  --input: oklch(0.9 0.008 95);
+  --ring: oklch(0.55 0.08 165);
+  --radius: 0.75rem;
+  --income: oklch(0.55 0.14 155);
+  --income-soft: oklch(0.955 0.04 155);
+  --expense: oklch(0.58 0.2 27);
+  --expense-soft: oklch(0.96 0.03 27);
+  --warning: oklch(0.65 0.15 70);
+  --warning-soft: oklch(0.965 0.05 85);
+  --sidebar: oklch(0.975 0.006 95);
+  --sidebar-foreground: oklch(0.2 0.01 95);
+  --sidebar-primary: oklch(0.32 0.05 165);
+  --sidebar-primary-foreground: oklch(0.985 0.004 95);
+  --sidebar-accent: oklch(0.94 0.012 150);
+  --sidebar-accent-foreground: oklch(0.28 0.04 165);
+  --sidebar-border: oklch(0.91 0.008 95);
+  --sidebar-ring: oklch(0.55 0.08 165);
+
+  /* Grafik: palet kategorikal tervalidasi (urutan tetap) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-8: #e34948;
+  --series-other: #8b8a85;
+  --chart-income: #1baf7a;
+  --chart-expense: #e34948;
+  --chart-grid: oklch(0.92 0.006 95);
+  --chart-axis: oklch(0.5 0.015 95);
+}
+
+.dark {
+  --background: oklch(0.17 0.008 95);
+  --foreground: oklch(0.95 0.006 95);
+  --card: oklch(0.21 0.009 95);
+  --card-foreground: oklch(0.95 0.006 95);
+  --popover: oklch(0.23 0.009 95);
+  --popover-foreground: oklch(0.95 0.006 95);
+  --primary: oklch(0.8 0.12 160);
+  --primary-foreground: oklch(0.2 0.03 165);
+  --secondary: oklch(0.27 0.01 95);
+  --secondary-foreground: oklch(0.95 0.006 95);
+  --muted: oklch(0.27 0.01 95);
+  --muted-foreground: oklch(0.72 0.012 95);
+  --accent: oklch(0.3 0.03 160);
+  --accent-foreground: oklch(0.92 0.05 160);
+  --destructive: oklch(0.7 0.18 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.65 0.1 160);
+  --income: oklch(0.75 0.15 155);
+  --income-soft: oklch(0.3 0.05 155);
+  --expense: oklch(0.72 0.17 25);
+  --expense-soft: oklch(0.3 0.05 25);
+  --warning: oklch(0.8 0.14 80);
+  --warning-soft: oklch(0.32 0.05 80);
+  --sidebar: oklch(0.2 0.009 95);
+  --sidebar-foreground: oklch(0.95 0.006 95);
+  --sidebar-primary: oklch(0.8 0.12 160);
+  --sidebar-primary-foreground: oklch(0.2 0.03 165);
+  --sidebar-accent: oklch(0.28 0.03 160);
+  --sidebar-accent-foreground: oklch(0.92 0.05 160);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.65 0.1 160);
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --series-other: #8b8a85;
+  --chart-income: #199e70;
+  --chart-expense: #e66767;
+  --chart-grid: oklch(1 0 0 / 8%);
+  --chart-axis: oklch(0.72 0.012 95);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+  }
+}
+
+/* Ruang untuk bottom navigation dan safe-area di HP */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
 }
