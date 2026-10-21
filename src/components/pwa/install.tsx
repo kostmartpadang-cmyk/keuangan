@@ -17,10 +17,17 @@ let installed = false;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
+declare global {
+  interface Window {
+    __bip?: BeforeInstallPromptEvent;
+  }
+}
+
 if (typeof window !== "undefined") {
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferred = e as BeforeInstallPromptEvent;
+  // Event bisa sudah ditangkap oleh script awal di <head> sebelum modul ini dimuat.
+  if (window.__bip) deferred = window.__bip;
+  window.addEventListener("bip-ready", () => {
+    deferred = window.__bip ?? null;
     emit();
   });
   window.addEventListener("appinstalled", () => {
@@ -47,17 +54,46 @@ function isIos() {
   return /iphone|ipad|ipod/i.test(ua) || (ua.includes("Macintosh") && navigator.maxTouchPoints > 1);
 }
 
-type Mode = "hidden" | "prompt" | "ios";
+type Mode = "hidden" | "prompt" | "ios" | "manual";
 
 function getMode(): Mode {
   if (installed || isStandalone()) return "hidden";
   if (deferred) return "prompt";
   if (isIos()) return "ios";
+  // HP Android tanpa prompt otomatis (browser lain / syarat belum terpenuhi): tampilkan petunjuk manual.
+  if (/android/i.test(navigator.userAgent)) return "manual";
   return "hidden";
 }
 
 function useInstallMode(): Mode {
   return useSyncExternalStore(subscribe, getMode, () => "hidden");
+}
+
+function ManualGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pasang {APP_NAME} di Android</DialogTitle>
+          <DialogDescription>Browser Anda belum menawarkan pemasangan otomatis. Pasang lewat menu browser.</DialogDescription>
+        </DialogHeader>
+        <ol className="list-decimal space-y-2 pl-5 text-sm">
+          <li>
+            Buka situs ini di <strong>Chrome</strong> (paling andal).
+          </li>
+          <li>
+            Ketuk menu <strong>⋮</strong> di pojok kanan atas.
+          </li>
+          <li>
+            Pilih <strong>Instal aplikasi</strong> atau <strong>Tambahkan ke layar utama</strong>.
+          </li>
+        </ol>
+        <p className="text-xs text-muted-foreground">
+          Jika opsinya tidak ada, muat ulang halaman lalu coba lagi, atau pastikan Anda membuka situs lewat https.
+        </p>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function IosGuide({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
@@ -114,7 +150,7 @@ export function InstallButton({
         variant={variant}
         className={className}
         onClick={async () => {
-          if (mode === "ios") return setGuide(true);
+          if (mode === "ios" || mode === "manual") return setGuide(true);
           const event = deferred;
           if (!event) return;
           await event.prompt();
@@ -123,9 +159,13 @@ export function InstallButton({
           emit();
         }}
       >
-        <Download aria-hidden /> {label}
+        <Download aria-hidden /> {mode === "manual" ? "Cara pasang aplikasi" : label}
       </Button>
-      <IosGuide open={guide} onOpenChange={setGuide} />
+      {mode === "manual" ? (
+        <ManualGuide open={guide} onOpenChange={setGuide} />
+      ) : (
+        <IosGuide open={guide} onOpenChange={setGuide} />
+      )}
     </>
   );
 }

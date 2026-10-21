@@ -36,6 +36,15 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" suppressHydrationWarning className={`${jakarta.variable} ${geistMono.variable} h-full`}>
+      <head>
+        {/* Tangkap beforeinstallprompt sedini mungkin; event ini hanya dikirim sekali dan bisa terjadi sebelum React siap. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;window.dispatchEvent(new Event('bip-ready'))});",
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
