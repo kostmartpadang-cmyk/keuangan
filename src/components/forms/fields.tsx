@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { formatDigits, parseRupiah } from "@/lib/money";
@@ -105,6 +107,26 @@ export function MoneyInput({
         }}
         className="tabular w-full bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground/60 sm:text-base"
       />
+    </div>
+  );
+}
+
+/** Input kata sandi dengan tombol mata untuk menampilkan/menyembunyikan isinya. */
+export function PasswordInput({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
+  const [visible, setVisible] = React.useState(false);
+  const Icon = visible ? EyeOff : Eye;
+  return (
+    <div className="relative">
+      <Input {...props} type={visible ? "text" : "password"} className={cn("pr-11", className)} />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+        aria-pressed={visible}
+        className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground"
+      >
+        <Icon className="size-4" aria-hidden />
+      </button>
     </div>
   );
 }

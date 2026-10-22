@@ -1,4 +1,5 @@
 import { addDays, addMonths, daysBetween, formatDayMonth, monthEnd, monthStart, type ISODate } from "../dates";
+import { BUDGET_LOW_REMAINING_RATIO } from "../constants";
 import { formatRupiah } from "../money";
 import type { Category, TransactionLite } from "../types";
 import { expenseByCategory, totalsOf } from "./aggregate";
@@ -90,13 +91,16 @@ export function buildInsights(params: {
       resolveLimit(budgets, type, null, start),
     );
     if (total.level === "warning" || total.level === "over") {
+      const low = type === "weekly" && total.level === "warning" && total.remaining <= total.limit * BUDGET_LOW_REMAINING_RATIO;
       out.push({
         id: `budget-${type}-total`,
         tone: total.level === "over" ? "danger" : "warning",
         title:
           total.level === "over"
             ? `Anggaran ${periodName} total sudah terlampaui`
-            : `Anggaran ${periodName} total hampir habis (${Math.round(total.ratio * 100)}%)`,
+            : low
+              ? `Sisa anggaran mingguan tinggal ${Math.max(0, Math.round((total.remaining / total.limit) * 100))}% (${formatRupiah(total.remaining)})`
+              : `Anggaran ${periodName} total hampir habis (${Math.round(total.ratio * 100)}%)`,
         detail: `Terpakai ${formatRupiah(total.spent)} dari ${formatRupiah(total.limit)}.`,
       });
     }

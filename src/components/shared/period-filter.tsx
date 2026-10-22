@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const PRESETS: PeriodKey[] = ["today", "week", "month", "last_month"];
 
 const dateCls =
-  "h-9 w-full rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
+  "min-w-0 max-w-full appearance-none h-9 w-full rounded-xl border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
 /** Filter periode berbasis URL (?p=&from=&to=) sehingga dapat dibagikan dan bekerja di server. */
 export function PeriodFilter({ basePath, period }: { basePath: string; period: Period }) {

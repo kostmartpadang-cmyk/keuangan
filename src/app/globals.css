@@ -159,11 +159,28 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    width: 100%;
+    max-width: 100%;
     overflow-x: hidden;
+    overflow-x: clip;
   }
   html {
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    overflow-x: clip;
+  }
+  /* Anak grid/flex tidak boleh melebihi lebar layar karena konten (angka, tabel, grafik) */
+  .grid > * {
+    min-width: 0;
+  }
+  img,
+  svg,
+  canvas,
+  table {
+    max-width: 100%;
   }
   /* iOS Safari zoom otomatis saat fokus ke field berfont <16px */
   @media (max-width: 767px) {

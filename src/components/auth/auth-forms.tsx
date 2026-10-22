@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2, MailCheck } from "lucide-react";
 import { login, register, requestPasswordReset, updatePassword } from "@/actions/auth";
-import { Field } from "@/components/forms/fields";
+import { Field, PasswordInput } from "@/components/forms/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRunAction } from "@/hooks/use-run-action";
@@ -42,7 +42,7 @@ export function LoginForm({ next }: { next?: string }) {
         <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" className="h-11 sm:h-9" aria-invalid={!!errors.email} />
       </Field>
       <Field label="Kata sandi" htmlFor="password" error={errors.password}>
-        <Input id="password" name="password" type="password" autoComplete="current-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
+        <PasswordInput id="password" name="password" autoComplete="current-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
       </Field>
       <div className="-mt-2 text-right">
         <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
@@ -104,10 +104,10 @@ export function RegisterForm() {
         <Input id="email" name="email" type="email" autoComplete="email" inputMode="email" className="h-11 sm:h-9" aria-invalid={!!errors.email} />
       </Field>
       <Field label="Kata sandi" htmlFor="password" error={errors.password} hint="Minimal 8 karakter.">
-        <Input id="password" name="password" type="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
+        <PasswordInput id="password" name="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
       </Field>
       <Field label="Ulangi kata sandi" htmlFor="confirm" error={errors.confirm}>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.confirm} />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.confirm} />
       </Field>
       <SubmitButton pending={pending}>Daftar</SubmitButton>
     </form>
@@ -173,10 +173,10 @@ export function ResetPasswordForm() {
       }}
     >
       <Field label="Kata sandi baru" htmlFor="password" error={errors.password} hint="Minimal 8 karakter.">
-        <Input id="password" name="password" type="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
+        <PasswordInput id="password" name="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.password} />
       </Field>
       <Field label="Ulangi kata sandi baru" htmlFor="confirm" error={errors.confirm}>
-        <Input id="confirm" name="confirm" type="password" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.confirm} />
+        <PasswordInput id="confirm" name="confirm" autoComplete="new-password" className="h-11 sm:h-9" aria-invalid={!!errors.confirm} />
       </Field>
       <SubmitButton pending={pending}>Simpan kata sandi</SubmitButton>
     </form>

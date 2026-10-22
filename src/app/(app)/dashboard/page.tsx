@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, Plus, ReceiptText, Wallet } from "lucide-react";
 import { BudgetProgressCard, InsightList } from "@/components/dashboard/widgets";
+import { WeeklyBudgetAlert } from "@/components/dashboard/weekly-budget-alert";
 import { CategoryBreakdown, IncomeExpenseChart } from "@/components/charts/charts";
 import { EmptyState, Money, PageHeader, SectionCard, StatCard } from "@/components/shared/ui-bits";
 import { PeriodFilter } from "@/components/shared/period-filter";
@@ -19,7 +20,8 @@ import { addMonths, formatRange, monthStart, periodFromSearchParams, todayJakart
 import { expenseByCategory, incomeExpenseSeries, totalsOf } from "@/lib/finance/aggregate";
 import { currentBudgetOverview } from "@/lib/finance/budgets";
 import { buildInsights } from "@/lib/finance/insights";
-import { ACCOUNT_KIND_LABELS } from "@/lib/constants";
+import { formatRupiah } from "@/lib/money";
+import { ACCOUNT_KIND_LABELS, BUDGET_LOW_REMAINING_RATIO } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Beranda" };
 
@@ -61,12 +63,19 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const reminders = insights.filter((i) => i.tone === "warning" || i.tone === "danger").filter((i) => i.id.startsWith("budget-"));
   const otherInsights = insights.filter((i) => !reminders.includes(i));
 
+  const weeklyTotal = weekly.total;
+  const weeklyLow =
+    weeklyTotal.level === "warning" && weeklyTotal.remaining <= weeklyTotal.limit * BUDGET_LOW_REMAINING_RATIO
+      ? `Sisa ${formatRupiah(weeklyTotal.remaining)} (${Math.round((weeklyTotal.remaining / weeklyTotal.limit) * 100)}%) dari batas minggu ini.`
+      : null;
+
   const accountNames = new Map(accounts.map((a) => [a.id, a.name]));
   const firstName = profile.full_name?.split(" ")[0];
   const noTransactionsEver = recent.length === 0;
 
   return (
     <div className="grid gap-5">
+      {weeklyLow && <WeeklyBudgetAlert weekStart={weekly.start} message={weeklyLow} />}
       <PageHeader
         title={firstName ? `Halo, ${firstName}` : "Beranda"}
         description={`Ringkasan keuangan · ${formatRange(period.from, period.to)}`}

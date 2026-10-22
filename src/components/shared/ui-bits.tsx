@@ -151,7 +151,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      <p className="tabular mt-2 text-2xl font-bold tracking-tight sm:text-[1.7rem]">{value}</p>
+      <p className="tabular mt-2 text-xl font-bold tracking-tight min-[400px]:text-2xl sm:text-[1.7rem]">{value}</p>
       {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
     </div>
   );

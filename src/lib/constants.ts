@@ -43,3 +43,5 @@ export const PAGE_SIZE = 20;
 
 /** Ambang peringatan anggaran. */
 export const BUDGET_WARN_RATIO = 0.8;
+/** Notifikasi khusus saat sisa anggaran mingguan tinggal sebesar ini atau kurang (10%). */
+export const BUDGET_LOW_REMAINING_RATIO = 0.1;
