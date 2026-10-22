@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Bell, BellOff, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { removePushSubscription, savePushSubscription, sendTestNotification } from "@/actions/push";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type State = "loading" | "unsupported" | "denied" | "off" | "on";
 
@@ -21,8 +22,8 @@ async function currentSubscription() {
   return reg.pushManager.getSubscription();
 }
 
-/** Tombol aktifkan/matikan notifikasi push di perangkat ini (masuk ke bilah notifikasi HP). */
-export function NotificationToggle() {
+/** Status dan aksi notifikasi push di perangkat ini (dipakai tombol di Pengaturan, menu, dan banner). */
+export function usePushNotifications() {
   const [state, setState] = useState<State>("loading");
   const [busy, setBusy] = useState(false);
 
@@ -102,6 +103,13 @@ export function NotificationToggle() {
     else toast.error(res.error);
   }
 
+  return { state, busy, enable, disable, test };
+}
+
+/** Tombol aktifkan/matikan notifikasi push di perangkat ini (masuk ke bilah notifikasi HP). */
+export function NotificationToggle({ className }: { className?: string }) {
+  const { state, busy, enable, disable, test } = usePushNotifications();
+
   if (state === "loading") return null;
 
   if (state === "unsupported") {
@@ -120,7 +128,7 @@ export function NotificationToggle() {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className={cn("flex flex-wrap gap-2", className)}>
       {state === "on" ? (
         <>
           <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={disable} disabled={busy}>
@@ -135,6 +143,51 @@ export function NotificationToggle() {
           {busy ? <Loader2 className="animate-spin" aria-hidden /> : <Bell aria-hidden />} Aktifkan notifikasi
         </Button>
       )}
+    </div>
+  );
+}
+
+const DISMISS_KEY = "ruanguang-notif-dismissed";
+
+/** Ajakan mengaktifkan notifikasi di Beranda; hilang setelah aktif atau ditutup (diingat per-perangkat). */
+export function NotificationBanner() {
+  const { state, busy, enable } = usePushNotifications();
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return typeof window !== "undefined" && localStorage.getItem(DISMISS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (state !== "off" || dismissed) return null;
+
+  return (
+    <div className="animate-fade-up flex items-center gap-3 rounded-2xl border bg-accent/60 p-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <Bell className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">Aktifkan notifikasi</p>
+        <p className="text-xs text-muted-foreground">Dapat peringatan di HP saat sisa anggaran mingguan tinggal 10%.</p>
+      </div>
+      <Button type="button" className="h-9 rounded-xl" onClick={enable} disabled={busy}>
+        {busy && <Loader2 className="animate-spin" aria-hidden />} Aktifkan
+      </Button>
+      <button
+        type="button"
+        aria-label="Tutup ajakan notifikasi"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted"
+        onClick={() => {
+          try {
+            localStorage.setItem(DISMISS_KEY, "1");
+          } catch {
+            // Tanpa localStorage, cukup tutup untuk sesi ini.
+          }
+          setDismissed(true);
+        }}
+      >
+        <X className="size-4" aria-hidden />
+      </button>
     </div>
   );
 }

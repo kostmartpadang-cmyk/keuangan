@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useOptimisticNav } from "@/hooks/use-optimistic-nav";
 import { isActive, NAV_ITEMS } from "./nav-config";
 import { InstallButton } from "@/components/pwa/install";
+import { NotificationToggle } from "@/components/pwa/notifications";
 import { ThemeToggle } from "./theme-toggle";
 
 const PRIMARY = NAV_ITEMS.filter((i) => ["/dashboard", "/transactions", "/budgets"].includes(i.href));
@@ -95,6 +96,9 @@ export function MobileNav() {
                 {label}
               </Link>
             ))}
+          </div>
+          <div className="px-4 empty:hidden">
+            <NotificationToggle />
           </div>
           <div className="px-4 empty:hidden">
             <InstallButton className="h-11 w-full rounded-2xl" />

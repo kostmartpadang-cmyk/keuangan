@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, PiggyBank, Plus, ReceiptText, Wallet } from "lucide-react";
 import { BudgetProgressCard, InsightList } from "@/components/dashboard/widgets";
+import { NotificationBanner } from "@/components/pwa/notifications";
 import { WeeklyBudgetAlert } from "@/components/dashboard/weekly-budget-alert";
 import { CategoryBreakdown, IncomeExpenseChart } from "@/components/charts/charts";
 import { EmptyState, Money, PageHeader, SectionCard, StatCard } from "@/components/shared/ui-bits";
@@ -90,6 +91,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       />
 
       <PeriodFilter basePath="/dashboard" period={period} />
+
+      <NotificationBanner />
 
       {noTransactionsEver && (
         <EmptyState
