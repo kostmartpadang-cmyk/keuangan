@@ -8,6 +8,7 @@ import { logout } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useOptimisticNav } from "@/hooks/use-optimistic-nav";
 import { isActive, NAV_ITEMS } from "./nav-config";
 import { InstallButton } from "@/components/pwa/install";
 import { ThemeToggle } from "./theme-toggle";
@@ -17,15 +18,17 @@ const MORE = NAV_ITEMS.filter((i) => !PRIMARY.includes(i));
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { isActiveHref, onNavigate } = useOptimisticNav(pathname);
   const [open, setOpen] = useState(false);
   const moreActive = MORE.some((i) => isActive(pathname, i.href));
 
   const tab = (href: string, label: string, Icon: (typeof NAV_ITEMS)[number]["icon"]) => {
-    const active = isActive(pathname, href);
+    const active = isActiveHref(href);
     return (
       <Link
         key={href}
         href={href}
+        onClick={() => onNavigate(href)}
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors",

@@ -28,8 +28,6 @@ export const metadata: Metadata = { title: "Beranda" };
 export default async function DashboardPage({ searchParams }: PageProps<"/dashboard">) {
   const sp = await searchParams;
   const { supabase } = await requireUser();
-  const profile = await getProfile();
-
   const today = todayJakarta();
   const period = periodFromSearchParams(sp);
   // Anggaran & insight selalu memakai bulan lalu s.d. hari ini, terlepas dari filter periode.
@@ -38,7 +36,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   // Periode yang sudah tercakup rentang lebar (mis. bulan ini) disaring dari data yang sama, tanpa query tambahan.
   const periodInsideWide = period.from >= wideFrom && period.to <= today;
 
-  const [accounts, categories, budgets, wideTxs, periodFetched, recent] = await Promise.all([
+  const [profile, accounts, categories, budgets, wideTxs, periodFetched, recent] = await Promise.all([
+    getProfile(),
     getAccounts(supabase),
     getCategories(supabase),
     getBudgets(supabase),

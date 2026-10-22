@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "./brand-mark";
-import { isActive, NAV_ITEMS } from "./nav-config";
+import { useOptimisticNav } from "@/hooks/use-optimistic-nav";
+import { NAV_ITEMS } from "./nav-config";
 import { ThemeToggle } from "./theme-toggle";
 
 export function Sidebar({ displayName, email }: { displayName: string | null; email: string }) {
   const pathname = usePathname();
+  const { isActiveHref, onNavigate } = useOptimisticNav(pathname);
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r bg-sidebar p-4 md:flex">
@@ -27,11 +29,12 @@ export function Sidebar({ displayName, email }: { displayName: string | null; em
 
       <nav aria-label="Navigasi utama" className="flex flex-1 flex-col gap-0.5 overflow-y-auto">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-          const active = isActive(pathname, href);
+          const active = isActiveHref(href);
           return (
             <Link
               key={href}
               href={href}
+              onClick={() => onNavigate(href)}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",

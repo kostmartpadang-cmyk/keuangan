@@ -171,23 +171,32 @@ export async function getBudgets(supabase: SupabaseClient): Promise<Budget[]> {
   return unwrap(res, []) as Budget[];
 }
 
+/** Rencana bulanan beserta pos-posnya dalam satu permintaan (relasi plan_items di-embed). */
 export async function getPlan(
   supabase: SupabaseClient,
   month: string,
 ): Promise<{ plan: FinancialPlan | null; items: PlanItem[] }> {
-  const planRes = await supabase.from("financial_plans").select("id, month, salary").eq("month", month).maybeSingle();
-  if (planRes.error) throw new Error(planRes.error.message);
-  const plan = (planRes.data as FinancialPlan | null) ?? null;
-  if (!plan) return { plan: null, items: [] };
+  const res = await supabase
+    .from("financial_plans")
+    .select("id, month, salary, plan_items(id, plan_id, name, kind, category_id, amount, sort_order, created_at)")
+    .eq("month", month)
+    .maybeSingle();
+  if (res.error) throw new Error(res.error.message);
+  if (!res.data) return { plan: null, items: [] };
 
-  const itemsRes = await supabase
-    .from("plan_items")
-    .select("id, plan_id, name, kind, category_id, amount, sort_order")
-    .eq("plan_id", plan.id)
-    .order("kind")
-    .order("sort_order")
-    .order("created_at");
-  return { plan, items: unwrap(itemsRes, []) as PlanItem[] };
+  const { plan_items, ...plan } = res.data as FinancialPlan & { plan_items: (PlanItem & { created_at: string })[] };
+  const items = [...(plan_items ?? [])].sort(
+    (x, y) =>
+      x.kind.localeCompare(y.kind) || x.sort_order - y.sort_order || x.created_at.localeCompare(y.created_at),
+  );
+  return { plan, items };
+}
+
+/** Apakah rencana bulan tertentu sudah ada (tanpa memuat pos-posnya). */
+export async function hasPlan(supabase: SupabaseClient, month: string): Promise<boolean> {
+  const res = await supabase.from("financial_plans").select("id", { count: "exact", head: true }).eq("month", month);
+  if (res.error) throw new Error(res.error.message);
+  return (res.count ?? 0) > 0;
 }
 
 export async function getGoals(

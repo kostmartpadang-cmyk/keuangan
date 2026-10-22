@@ -5,7 +5,7 @@ import { PlanEditor, type PlanItemView } from "@/components/planning/plan-editor
 import { Money, PageHeader, SectionCard } from "@/components/shared/ui-bits";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/data/auth";
-import { getAccounts, getCategories, getPlan, getTransactionsInRange } from "@/lib/data/queries";
+import { getAccounts, getCategories, getPlan, hasPlan, getTransactionsInRange } from "@/lib/data/queries";
 import { addMonths, formatMonthYear, isValidISODate, monthEnd, monthStart, todayJakarta } from "@/lib/dates";
 import { expenseByCategory, totalsOf } from "@/lib/finance/aggregate";
 import { summarizePlan } from "@/lib/finance/plan";
@@ -22,9 +22,9 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
   const month = monthStart(raw && isValidISODate(`${raw}-01`) ? `${raw}-01` : todayJakarta());
   const monthParam = (m: string) => `/planning?month=${m.slice(0, 7)}`;
 
-  const [{ plan, items }, prev, accounts, categories, txs] = await Promise.all([
+  const [{ plan, items }, prevExists, accounts, categories, txs] = await Promise.all([
     getPlan(supabase, month),
-    getPlan(supabase, addMonths(month, -1)),
+    hasPlan(supabase, addMonths(month, -1)),
     getAccounts(supabase),
     getCategories(supabase),
     getTransactionsInRange(supabase, month, monthEnd(month)),
@@ -109,7 +109,7 @@ export default async function PlanningPage({ searchParams }: PageProps<"/plannin
         recordedSalary={recordedSalary}
         items={views}
         categories={expenseCats}
-        canCopyPrevious={Boolean(prev.plan)}
+        canCopyPrevious={prevExists}
       />
     </div>
   );
