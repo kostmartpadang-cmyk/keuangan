@@ -99,13 +99,28 @@ function isoWeekday(s: ISODate): number {
   return (parse(s).getUTCDay() + 6) % 7;
 }
 
-/** Minggu berjalan dari Senin sampai Minggu. */
-export function weekStart(s: ISODate): ISODate {
-  return addDays(s, -isoWeekday(s));
+/** Nama hari menurut ISO: indeks 1 = Senin … 7 = Minggu. */
+export const WEEKDAY_NAMES = ["", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+
+/** Normalisasi hari mulai minggu ke 1 (Senin) … 7 (Minggu); selain itu dianggap Senin. */
+export function normalizeWeekDay(day: unknown): number {
+  const n = Number(day);
+  return Number.isInteger(n) && n >= 1 && n <= 7 ? n : 1;
 }
 
-export function weekEnd(s: ISODate): ISODate {
-  return addDays(weekStart(s), 6);
+/** Awal minggu yang memuat `s`, dengan minggu dimulai pada hari `weekDay` (1 = Senin … 7 = Minggu). */
+export function weekStart(s: ISODate, weekDay = 1): ISODate {
+  return addDays(s, -((isoWeekday(s) - (weekDay - 1) + 7) % 7));
+}
+
+export function weekEnd(s: ISODate, weekDay = 1): ISODate {
+  return addDays(weekStart(s, weekDay), 6);
+}
+
+/** Label rentang minggu, mis. "Senin–Minggu" atau "Jumat–Kamis". */
+export function formatWeekSpan(weekDay = 1): string {
+  const last = weekDay === 1 ? 7 : weekDay - 1;
+  return `${WEEKDAY_NAMES[weekDay]}–${WEEKDAY_NAMES[last]}`;
 }
 
 export function daysBetween(from: ISODate, to: ISODate): number {
@@ -173,12 +188,13 @@ export function resolvePeriod(
   custom: { from?: string; to?: string } = {},
   today: ISODate = todayJakarta(),
   startDay = 1,
+  weekDay = 1,
 ): Period {
   switch (key) {
     case "today":
       return { key, from: today, to: today, label: PERIOD_LABELS.today };
     case "week":
-      return { key, from: weekStart(today), to: weekEnd(today), label: PERIOD_LABELS.week };
+      return { key, from: weekStart(today, weekDay), to: weekEnd(today, weekDay), label: PERIOD_LABELS.week };
     case "last_month": {
       const from = addCycles(cycleStart(today, startDay), -1, startDay);
       return { key, from, to: cycleEnd(from, startDay), label: PERIOD_LABELS.last_month };
@@ -190,7 +206,7 @@ export function resolvePeriod(
         const [from, to] = f <= t ? [f, t] : [t, f];
         return { key, from, to, label: formatRange(from, to) };
       }
-      return resolvePeriod("month", {}, today, startDay);
+      return resolvePeriod("month", {}, today, startDay, weekDay);
     }
     case "month":
     default:
@@ -204,9 +220,10 @@ export function periodFromSearchParams(
   sp: { p?: string | string[]; from?: string | string[]; to?: string | string[] },
   fallback: PeriodKey = "month",
   startDay = 1,
+  weekDay = 1,
 ): Period {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const p = one(sp.p);
   const key = isPeriodKey(p) ? p : fallback;
-  return resolvePeriod(key, { from: one(sp.from), to: one(sp.to) }, todayJakarta(), startDay);
+  return resolvePeriod(key, { from: one(sp.from), to: one(sp.to) }, todayJakarta(), startDay, weekDay);
 }

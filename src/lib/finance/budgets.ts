@@ -3,12 +3,13 @@ import { BUDGET_WARN_RATIO } from "../constants";
 import type { Budget, BudgetPeriodType, TransactionLite } from "../types";
 
 /** `startDay` = tanggal mulai "bulan" (mis. tanggal gajian); hanya berpengaruh pada anggaran bulanan. */
-export function periodStartOf(type: BudgetPeriodType, date: ISODate, startDay = 1): ISODate {
-  return type === "weekly" ? weekStart(date) : cycleStart(date, startDay);
+/** `weekDay` = hari mulai minggu (1 = Senin … 7 = Minggu); hanya berpengaruh pada anggaran mingguan. */
+export function periodStartOf(type: BudgetPeriodType, date: ISODate, startDay = 1, weekDay = 1): ISODate {
+  return type === "weekly" ? weekStart(date, weekDay) : cycleStart(date, startDay);
 }
 
-export function periodEndOf(type: BudgetPeriodType, start: ISODate, startDay = 1): ISODate {
-  return type === "weekly" ? weekEnd(start) : cycleEnd(start, startDay);
+export function periodEndOf(type: BudgetPeriodType, start: ISODate, startDay = 1, weekDay = 1): ISODate {
+  return type === "weekly" ? weekEnd(start, weekDay) : cycleEnd(start, startDay);
 }
 
 export function previousPeriodStart(type: BudgetPeriodType, start: ISODate, startDay = 1): ISODate {
@@ -85,11 +86,12 @@ export function budgetHistory(
   today: ISODate,
   count: number,
   startDay = 1,
+  weekDay = 1,
 ): BudgetHistoryRow[] {
   const rows: BudgetHistoryRow[] = [];
-  let start = previousPeriodStart(type, periodStartOf(type, today, startDay), startDay);
+  let start = previousPeriodStart(type, periodStartOf(type, today, startDay, weekDay), startDay);
   for (let i = 0; i < count; i++) {
-    const end = periodEndOf(type, start, startDay);
+    const end = periodEndOf(type, start, startDay, weekDay);
     const limit = resolveLimit(budgets, type, null, start);
     rows.push({ start, end, status: budgetStatus(spentInPeriod(txs, type, null, start, end), limit) });
     start = previousPeriodStart(type, start, startDay);
@@ -118,9 +120,10 @@ export function currentBudgetOverview(
   type: BudgetPeriodType,
   today: ISODate,
   startDay = 1,
+  weekDay = 1,
 ): BudgetOverview {
-  const start = periodStartOf(type, today, startDay);
-  const end = periodEndOf(type, start, startDay);
+  const start = periodStartOf(type, today, startDay, weekDay);
+  const end = periodEndOf(type, start, startDay, weekDay);
   const total = budgetStatus(spentInPeriod(txs, type, null, start, end), resolveLimit(budgets, type, null, start));
   const categories: CategoryBudgetStatus[] = [];
   for (const c of expenseCategories) {

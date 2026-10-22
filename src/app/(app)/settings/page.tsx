@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { NotificationToggle } from "@/components/pwa/notifications";
 import { InstallButton } from "@/components/pwa/install";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { CategoriesManager, MonthStartForm, PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
+import { CategoriesManager, PasswordForm, PeriodPrefsForm, ProfileForm } from "@/components/settings/settings-forms";
 import { PageHeader, SectionCard } from "@/components/shared/ui-bits";
 import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/data/auth";
@@ -29,10 +29,14 @@ export default async function SettingsPage() {
       </div>
 
       <SectionCard
-        title="Periode bulanan"
-        description="Atur tanggal gajian Anda. Anggaran bulanan, 'Bulan ini' di Beranda, dan perbandingan bulan di Laporan akan dihitung dari tanggal ini."
+        title="Awal minggu dan bulan"
+        description="Atur hari mulai minggu dan tanggal gajian Anda. Anggaran, 'Minggu ini' dan 'Bulan ini' di Beranda, serta Laporan dihitung dari sini."
       >
-        <MonthStartForm key={profile.month_start_day} day={profile.month_start_day} />
+        <PeriodPrefsForm
+          key={`${profile.month_start_day}-${profile.week_start_day}`}
+          monthDay={profile.month_start_day}
+          weekDay={profile.week_start_day}
+        />
       </SectionCard>
 
       <SectionCard title="Tampilan" description="Mengikuti pengaturan perangkat secara bawaan.">

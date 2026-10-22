@@ -80,9 +80,9 @@ export interface TrendPoint {
   expense: number;
 }
 
-/** Pengeluaran per minggu (Senin–Minggu) untuk n minggu terakhir, termasuk minggu berjalan. */
-export function weeklyExpenseTrend(txs: Tx[], today: ISODate, n: number): TrendPoint[] {
-  const first = addDays(weekStart(today), -7 * (n - 1));
+/** Pengeluaran per minggu untuk n minggu terakhir, termasuk minggu berjalan (minggu dimulai pada `weekDay`, 1 = Senin). */
+export function weeklyExpenseTrend(txs: Tx[], today: ISODate, n: number, weekDay = 1): TrendPoint[] {
+  const first = addDays(weekStart(today, weekDay), -7 * (n - 1));
   const buckets = new Map<string, TrendPoint>();
   for (let i = 0; i < n; i++) {
     const k = addDays(first, 7 * i);
@@ -90,7 +90,7 @@ export function weeklyExpenseTrend(txs: Tx[], today: ISODate, n: number): TrendP
   }
   for (const t of txs) {
     if (t.type !== "expense") continue;
-    const b = buckets.get(weekStart(t.tx_date));
+    const b = buckets.get(weekStart(t.tx_date, weekDay));
     if (b) b.expense += t.amount;
   }
   return [...buckets.values()];

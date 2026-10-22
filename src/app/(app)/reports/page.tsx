@@ -16,6 +16,7 @@ import {
   cycleStart,
   formatCycle,
   formatRange,
+  formatWeekSpan,
   monthStart,
   periodFromSearchParams,
   todayJakarta,
@@ -34,8 +35,10 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const sp = await searchParams;
   const { supabase } = await requireUser();
   const today = todayJakarta();
-  const startDay = (await getProfile()).month_start_day;
-  const period = periodFromSearchParams(sp, "month", startDay);
+  const profile = await getProfile();
+  const startDay = profile.month_start_day;
+  const weekDay = profile.week_start_day;
+  const period = periodFromSearchParams(sp, "month", startDay, weekDay);
   const trendFrom = monthStart(addMonths(today, -11));
 
   const [accounts, categories, budgets, periodTxs, trendTxs, history] = await Promise.all([
@@ -54,7 +57,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const slices = byCategory.map((c) => ({ id: c.category_id, name: catName.get(c.category_id) ?? "Tanpa kategori", total: c.total }));
   const top = byCategory[0];
 
-  const weekly = weeklyExpenseTrend(trendTxs, today, 12);
+  const weekly = weeklyExpenseTrend(trendTxs, today, 12, weekDay);
   const monthly = monthlyExpenseTrend(trendTxs, today, 12);
 
   // Perbandingan bulan ini vs bulan lalu per kategori (8 kategori teratas dari keduanya)
@@ -72,7 +75,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
     .sort((a, b) => b.current + b.previous - (a.current + a.previous))
     .slice(0, 8);
 
-  const insights = buildInsights({ txs: trendTxs.filter((t) => t.tx_date >= lastStart), budgets, categories, today, startDay });
+  const insights = buildInsights({ txs: trendTxs.filter((t) => t.tx_date >= lastStart), budgets, categories, today, startDay, weekDay });
   const exportHref = `/api/export${buildQuery({ from: period.from, to: period.to })}`;
 
   return (
@@ -120,7 +123,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <SectionCard title="Tren pengeluaran mingguan" description="12 minggu terakhir (Senin–Minggu, label = hari Senin)">
+        <SectionCard title="Tren pengeluaran mingguan" description={`12 minggu terakhir (${formatWeekSpan(weekDay)}, label = hari pertama minggu)`}>
           <ExpenseTrendChart data={weekly} caption="Pengeluaran mingguan" />
         </SectionCard>
         <SectionCard title="Tren pengeluaran bulanan" description="12 bulan terakhir">

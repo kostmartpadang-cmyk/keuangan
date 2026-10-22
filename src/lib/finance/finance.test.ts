@@ -257,3 +257,17 @@ describe("periode bulan dengan tanggal mulai (gajian)", () => {
     expect(cycleEnd("2026-10-01", 1)).toBe("2026-10-31");
   });
 });
+
+describe("hari mulai minggu", () => {
+  it("weekStart/weekEnd mengikuti hari mulai (1 = Senin … 7 = Minggu)", async () => {
+    const { weekStart, weekEnd, formatWeekSpan } = await import("../dates");
+    // 2026-10-21 = Rabu
+    expect(weekStart("2026-10-21", 5)).toBe("2026-10-16"); // Jumat
+    expect(weekEnd("2026-10-21", 5)).toBe("2026-10-22"); // Kamis
+    expect(weekStart("2026-10-16", 5)).toBe("2026-10-16"); // hari mulai itu sendiri
+    expect(weekStart("2026-10-18", 7)).toBe("2026-10-18"); // Minggu
+    expect(weekStart("2026-10-21", 1)).toBe("2026-10-19");
+    expect(formatWeekSpan(5)).toBe("Jumat–Kamis");
+    expect(formatWeekSpan(1)).toBe("Senin–Minggu");
+  });
+});

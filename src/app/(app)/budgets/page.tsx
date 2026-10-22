@@ -6,7 +6,7 @@ import { Money, PageHeader, ProgressBar, SectionCard } from "@/components/shared
 import { BUDGET_WARN_RATIO } from "@/lib/constants";
 import { getProfile, requireUser } from "@/lib/data/auth";
 import { getBudgets, getCategories, getTransactionsInRange } from "@/lib/data/queries";
-import { addDays, addMonths, formatCycle, formatDayMonth, formatRange, monthStart, todayJakarta, weekStart } from "@/lib/dates";
+import { addDays, addMonths, formatCycle, formatDayMonth, formatRange, formatWeekSpan, monthStart, todayJakarta, weekStart } from "@/lib/dates";
 import {
   budgetHistory,
   budgetStatus,
@@ -55,13 +55,14 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
   ]);
   const expenseCats = categories.filter((c) => c.type === "expense");
   const startDay = profile.month_start_day;
-  const data = { today, txs, budgets, expenseCats, startDay };
+  const weekDay = profile.week_start_day;
+  const data = { today, txs, budgets, expenseCats, startDay, weekDay };
 
   return (
     <div className="grid gap-5">
       <PageHeader
         title="Anggaran"
-        description={startDay > 1 ? `Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan (mulai tanggal ${startDay}).` : "Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan kalender."}
+        description={`Batasi pengeluaran per minggu (${formatWeekSpan(weekDay)}) atau per bulan ${startDay > 1 ? `(mulai tanggal ${startDay})` : "kalender"}.`}
       />
       <BudgetTabs
         initial={initial}
@@ -73,7 +74,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
 
 function historyFromOf(type: BudgetPeriodType, today: string) {
   return type === "weekly"
-    ? addDays(weekStart(today), -7 * HISTORY_COUNT.weekly)
+    ? addDays(weekStart(today), -7 * (HISTORY_COUNT.weekly + 1)) // longgar: berlaku untuk hari mulai minggu apa pun
     : monthStart(addMonths(today, -(HISTORY_COUNT.monthly + 1)));
 }
 
@@ -84,6 +85,7 @@ function BudgetPanel({
   budgets,
   expenseCats,
   startDay,
+  weekDay,
 }: {
   type: BudgetPeriodType;
   today: string;
@@ -91,9 +93,10 @@ function BudgetPanel({
   budgets: Budget[];
   expenseCats: Category[];
   startDay: number;
+  weekDay: number;
 }) {
-  const start = periodStartOf(type, today, startDay);
-  const end = periodEndOf(type, start, startDay);
+  const start = periodStartOf(type, today, startDay, weekDay);
+  const end = periodEndOf(type, start, startDay, weekDay);
   const periodLabel = type === "weekly" ? formatRange(start, end) : startDay > 1 ? formatRange(start, end) : formatCycle(start);
   const total = budgetStatus(spentInPeriod(txs, type, null, start, end), resolveLimit(budgets, type, null, start));
   const rows = expenseCats.map((c) => ({
@@ -101,7 +104,7 @@ function BudgetPanel({
     status: budgetStatus(spentInPeriod(txs, type, c.id, start, end), resolveLimit(budgets, type, c.id, start)),
     spent: spentInPeriod(txs, type, c.id, start, end),
   }));
-  const history = budgetHistory(budgets, txs, type, today, HISTORY_COUNT[type], startDay);
+  const history = budgetHistory(budgets, txs, type, today, HISTORY_COUNT[type], startDay, weekDay);
 
   return (
     <>

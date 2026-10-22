@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import webpush from "web-push";
 import { BUDGET_LOW_REMAINING_RATIO } from "@/lib/constants";
+import { getPeriodPrefs } from "@/lib/data/auth";
 import { getBudgets, getTransactionsInRange } from "@/lib/data/queries";
 import { todayJakarta } from "@/lib/dates";
 import { budgetStatus, periodEndOf, periodStartOf, resolveLimit, spentInPeriod } from "@/lib/finance/budgets";
@@ -73,14 +74,15 @@ export async function sendTestPush(supabase: SupabaseClient): Promise<number> {
 }
 
 /** Kirim notifikasi bila sisa anggaran mingguan ≤ 10% (atau terlampaui); satu kali per minggu per tingkat. */
-export async function notifyWeeklyBudgetIfLow(supabase: SupabaseClient): Promise<void> {
+export async function notifyWeeklyBudgetIfLow(supabase: SupabaseClient, userId: string): Promise<void> {
   if (!configure()) return;
   const subs = await listSubs(supabase);
   if (subs.length === 0) return;
 
   const today = todayJakarta();
-  const start = periodStartOf("weekly", today);
-  const end = periodEndOf("weekly", start);
+  const { weekStartDay } = await getPeriodPrefs(supabase, userId);
+  const start = periodStartOf("weekly", today, 1, weekStartDay);
+  const end = periodEndOf("weekly", start, 1, weekStartDay);
   const [budgets, txs] = await Promise.all([getBudgets(supabase), getTransactionsInRange(supabase, start, end)]);
   const status = budgetStatus(spentInPeriod(txs, "weekly", null, start, end), resolveLimit(budgets, "weekly", null, start));
   if (status.limit <= 0) return;

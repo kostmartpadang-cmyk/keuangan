@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Loader2, Pencil, Plus } from "lucide-react";
-import { updateMonthStartDay, updatePassword, updateProfile } from "@/actions/auth";
+import { updatePassword, updatePeriodPrefs, updateProfile } from "@/actions/auth";
+import { formatWeekSpan, WEEKDAY_NAMES } from "@/lib/dates";
 import { createCategory, deleteCategory, updateCategory } from "@/actions/categories";
 import { Field, MoneyInput, NativeSelect } from "@/components/forms/fields";
 import { formatRupiah } from "@/lib/money";
@@ -199,40 +200,61 @@ export function CategoriesManager({ categories }: { categories: Category[] }) {
   );
 }
 
-/** Pilih tanggal mulai "bulan" (mis. tanggal gajian) untuk anggaran bulanan, ringkasan, dan laporan. */
-export function MonthStartForm({ day }: { day: number }) {
+/** Pilih awal "minggu" (hari) dan "bulan" (tanggal gajian) untuk anggaran, ringkasan, dan laporan. */
+export function PeriodPrefsForm({ monthDay, weekDay }: { monthDay: number; weekDay: number }) {
   const { run, pending } = useRunAction();
-  const [value, setValue] = useState(day);
+  const [month, setMonth] = useState(monthDay);
+  const [week, setWeek] = useState(weekDay);
   const [error, setError] = useState<string>();
 
   return (
     <form
       noValidate
-      className="flex flex-wrap items-end gap-2"
+      className="grid gap-4"
       onSubmit={(e) => {
         e.preventDefault();
         setError(undefined);
-        run(() => updateMonthStartDay(value), { onError: (r) => setError(r.error) });
+        run(() => updatePeriodPrefs({ month_start_day: month, week_start_day: week }), { onError: (r) => setError(r.error) });
       }}
     >
-      <Field
-        label="Bulan dimulai tanggal"
-        htmlFor="month-start"
-        error={error}
-        hint={value > 1 ? `Contoh: bulan berjalan dihitung dari tanggal ${value} sampai tanggal ${value - 1} bulan berikutnya.` : "Bulan kalender biasa (tanggal 1 sampai akhir bulan)."}
-        className="min-w-52 flex-1"
-      >
-        <NativeSelect id="month-start" value={value} onChange={(e) => setValue(Number(e.target.value))}>
-          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-            <option key={d} value={d}>
-              {d === 1 ? "Tanggal 1 (bulan kalender)" : `Tanggal ${d}`}
-            </option>
-          ))}
-        </NativeSelect>
-      </Field>
-      <Button type="submit" className="h-12 rounded-xl sm:h-10" disabled={pending || value === day}>
-        {pending && <Loader2 className="animate-spin" aria-hidden />} Simpan
-      </Button>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Minggu dimulai hari"
+          htmlFor="week-start"
+          hint={`Minggu berjalan dihitung ${formatWeekSpan(week)}.`}
+        >
+          <NativeSelect id="week-start" value={week} onChange={(e) => setWeek(Number(e.target.value))}>
+            {WEEKDAY_NAMES.slice(1).map((name, i) => (
+              <option key={name} value={i + 1}>
+                {name}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+        <Field
+          label="Bulan dimulai tanggal"
+          htmlFor="month-start"
+          hint={month > 1 ? `Bulan berjalan dihitung dari tanggal ${month} sampai tanggal ${month - 1} bulan berikutnya.` : "Bulan kalender biasa (tanggal 1 sampai akhir bulan)."}
+        >
+          <NativeSelect id="month-start" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={d}>
+                {d === 1 ? "Tanggal 1 (bulan kalender)" : `Tanggal ${d}`}
+              </option>
+            ))}
+          </NativeSelect>
+        </Field>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs font-medium text-destructive">
+          {error}
+        </p>
+      )}
+      <div>
+        <Button type="submit" className="h-12 rounded-xl sm:h-10" disabled={pending || (month === monthDay && week === weekDay)}>
+          {pending && <Loader2 className="animate-spin" aria-hidden />} Simpan
+        </Button>
+      </div>
     </form>
   );
 }

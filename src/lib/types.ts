@@ -11,6 +11,8 @@ export interface Profile {
   full_name: string | null;
   /** Tanggal mulai "bulan" untuk periode bulanan (mis. tanggal gajian), 1–28. */
   month_start_day: number;
+  /** Hari mulai minggu untuk periode mingguan: 1 = Senin … 7 = Minggu. */
+  week_start_day: number;
 }
 
 export interface Account {

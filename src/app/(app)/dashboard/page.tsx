@@ -17,7 +17,7 @@ import {
   getRecentTransactions,
   getTransactionsInRange,
 } from "@/lib/data/queries";
-import { addMonths, formatRange, monthEnd, monthStart, periodFromSearchParams, todayJakarta } from "@/lib/dates";
+import { addMonths, formatRange, formatWeekSpan, monthEnd, monthStart, periodFromSearchParams, todayJakarta } from "@/lib/dates";
 import { expenseByCategory, incomeExpenseSeries, totalsOf } from "@/lib/finance/aggregate";
 import { currentBudgetOverview } from "@/lib/finance/budgets";
 import { buildInsights } from "@/lib/finance/insights";
@@ -49,8 +49,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
     getRecentTransactions(supabase, 6),
   ]);
   const startDay = profile.month_start_day;
+  const weekDay = profile.week_start_day;
   // Periode final memakai tanggal mulai bulan pengguna (rentang khusus tidak terpengaruh).
-  const period = periodFromSearchParams(sp, "month", startDay);
+  const period = periodFromSearchParams(sp, "month", startDay, weekDay);
   // Anggaran & insight hanya menghitung sampai hari ini.
   const wideTxs = allTxs.filter((t) => t.tx_date <= today);
   const periodTxs = periodFetched ?? allTxs.filter((t) => t.tx_date >= period.from && t.tx_date <= period.to);
@@ -68,9 +69,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   }));
 
   const expenseCats = categories.filter((c) => c.type === "expense");
-  const weekly = currentBudgetOverview(budgets, wideTxs, expenseCats, "weekly", today);
+  const weekly = currentBudgetOverview(budgets, wideTxs, expenseCats, "weekly", today, startDay, weekDay);
   const monthly = currentBudgetOverview(budgets, wideTxs, expenseCats, "monthly", today, startDay);
-  const insights = buildInsights({ txs: wideTxs, budgets, categories, today, startDay });
+  const insights = buildInsights({ txs: wideTxs, budgets, categories, today, startDay, weekDay });
   const reminders = insights.filter((i) => i.tone === "warning" || i.tone === "danger").filter((i) => i.id.startsWith("budget-"));
   const otherInsights = insights.filter((i) => !reminders.includes(i));
 
@@ -165,7 +166,7 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
       <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard
           title="Anggaran minggu ini"
-          description="Senin – Minggu"
+          description={formatWeekSpan(weekDay)}
           actions={
             <Link href="/budgets" className="text-xs font-medium text-primary hover:underline">
               Kelola

@@ -123,16 +123,21 @@ export async function updateProfile(input: { full_name: string }): Promise<Actio
   return success("Profil diperbarui.");
 }
 
-/** Atur tanggal mulai "bulan" (mis. tanggal gajian) untuk periode bulanan. */
-export async function updateMonthStartDay(day: number): Promise<ActionResult> {
-  if (!Number.isInteger(day) || day < 1 || day > 28) return fail("Pilih tanggal 1 sampai 28.");
+/** Atur awal periode: tanggal mulai "bulan" (mis. gajian, 1–28) dan hari mulai "minggu" (1 = Senin … 7 = Minggu). */
+export async function updatePeriodPrefs(input: { month_start_day: number; week_start_day: number }): Promise<ActionResult> {
+  const { month_start_day: month, week_start_day: week } = input;
+  if (!Number.isInteger(month) || month < 1 || month > 28) return fail("Pilih tanggal 1 sampai 28.");
+  if (!Number.isInteger(week) || week < 1 || week > 7) return fail("Pilih hari mulai minggu yang valid.");
 
   const ctx = await getActionContext();
   if (!ctx) return fail("Sesi Anda berakhir. Silakan masuk kembali.");
 
-  const { error } = await ctx.supabase.from("profiles").update({ month_start_day: day }).eq("id", ctx.user.id);
-  if (error) return fail("Tanggal gagal disimpan. Pastikan migrasi database sudah dijalankan.");
+  const { error } = await ctx.supabase
+    .from("profiles")
+    .update({ month_start_day: month, week_start_day: week })
+    .eq("id", ctx.user.id);
+  if (error) return fail("Pengaturan gagal disimpan. Pastikan migrasi database sudah dijalankan.");
 
   revalidatePath("/", "layout");
-  return success(day === 1 ? "Bulan dihitung mengikuti kalender (tanggal 1)." : `Bulan sekarang dihitung dari tanggal ${day}.`);
+  return success("Awal periode diperbarui.");
 }

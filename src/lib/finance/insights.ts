@@ -29,8 +29,10 @@ export function buildInsights(params: {
   today: ISODate;
   /** Tanggal mulai "bulan" (mis. gajian); bawaan 1. `txs` harus mencakup awal bulan sebelumnya. */
   startDay?: number;
+  /** Hari mulai minggu (1 = Senin … 7 = Minggu); bawaan Senin. */
+  weekDay?: number;
 }): Insight[] {
-  const { txs, budgets, categories, today, startDay = 1 } = params;
+  const { txs, budgets, categories, today, startDay = 1, weekDay = 1 } = params;
   const nameOf = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "Tanpa kategori";
   const out: Insight[] = [];
 
@@ -84,8 +86,8 @@ export function buildInsights(params: {
 
   // 3. Anggaran hampir habis / terlampaui
   for (const type of ["weekly", "monthly"] as const) {
-    const start = periodStartOf(type, today, startDay);
-    const end = periodEndOf(type, start, startDay);
+    const start = periodStartOf(type, today, startDay, weekDay);
+    const end = periodEndOf(type, start, startDay, weekDay);
     const periodName = type === "weekly" ? "mingguan" : "bulanan";
 
     const total = budgetStatus(

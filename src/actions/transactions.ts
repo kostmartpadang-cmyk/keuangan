@@ -52,7 +52,7 @@ export async function saveTransaction(id: string | null, input: TransactionInput
     }
 
     // Setelah respons dikirim: cek sisa anggaran mingguan dan kirim notifikasi push bila perlu.
-    after(() => notifyWeeklyBudgetIfLow(supabase).catch((e) => console.error("[push]", e)));
+    after(() => notifyWeeklyBudgetIfLow(supabase, user.id).catch((e) => console.error("[push]", e)));
 
     revalidatePath("/", "layout");
     return success(id ?"Transaksi diperbarui." : "Transaksi disimpan.");
