@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Loader2, Pencil, Plus } from "lucide-react";
 import { updatePassword, updateProfile } from "@/actions/auth";
-import { createCategory, deleteCategory, renameCategory } from "@/actions/categories";
-import { Field } from "@/components/forms/fields";
+import { createCategory, deleteCategory, updateCategory } from "@/actions/categories";
+import { Field, MoneyInput } from "@/components/forms/fields";
+import { formatRupiah } from "@/lib/money";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -79,13 +80,15 @@ export function PasswordForm() {
 function RenameDialog({ category, onClose }: { category: Category; onClose: () => void }) {
   const { run, pending } = useRunAction();
   const [name, setName] = useState(category.name);
+  const [fixed, setFixed] = useState(category.default_amount ?? 0);
   const [error, setError] = useState<string>();
+  const [fixedError, setFixedError] = useState<string>();
 
   return (
     <Dialog open onOpenChange={(o) => !o && !pending && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Ubah nama kategori</DialogTitle>
+          <DialogTitle>Ubah kategori</DialogTitle>
           <DialogDescription>Transaksi lama yang memakai kategori ini ikut menampilkan nama baru.</DialogDescription>
         </DialogHeader>
         <form
@@ -94,12 +97,29 @@ function RenameDialog({ category, onClose }: { category: Category; onClose: () =
           onSubmit={(e) => {
             e.preventDefault();
             setError(undefined);
-            run(() => renameCategory(category.id, name), { onSuccess: onClose, onError: (r) => setError(r.fieldErrors?.name ?? r.error) });
+            setFixedError(undefined);
+            run(() => updateCategory(category.id, { name, default_amount: category.type === "expense" && fixed > 0 ? fixed : null }), {
+              onSuccess: onClose,
+              onError: (r) => {
+                setError(r.fieldErrors?.name ?? (r.fieldErrors?.default_amount ? undefined : r.error));
+                setFixedError(r.fieldErrors?.default_amount);
+              },
+            });
           }}
         >
           <Field label="Nama kategori" htmlFor="rn-name" error={error}>
             <Input id="rn-name" value={name} maxLength={60} autoFocus onChange={(e) => setName(e.target.value)} className="h-10" />
           </Field>
+          {category.type === "expense" && (
+            <Field
+              label="Nominal tetap (opsional)"
+              htmlFor="rn-fixed"
+              error={fixedError}
+              hint="Terisi otomatis di form transaksi saat kategori ini dipilih, dan tetap bisa diubah per transaksi. Kosongkan (0) untuk menonaktifkan."
+            >
+              <MoneyInput id="rn-fixed" value={fixed} onChange={setFixed} invalid={!!fixedError} />
+            </Field>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
               Batal
@@ -127,6 +147,7 @@ function CategoryColumn({ title, type, items }: { title: string; type: CategoryT
         {items.map((c) => (
           <li key={c.id} className="flex items-center gap-1 px-3 py-1.5">
             <span className="min-w-0 flex-1 truncate text-sm">{c.name}</span>
+            {c.default_amount ? <span className="tabular shrink-0 text-xs text-muted-foreground">{formatRupiah(c.default_amount)}</span> : null}
             <Button variant="ghost" size="icon-sm" aria-label={`Ubah ${c.name}`} className="text-muted-foreground" onClick={() => setRenaming(c)}>
               <Pencil aria-hidden />
             </Button>

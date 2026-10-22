@@ -162,8 +162,8 @@ describe("anggaran", () => {
 
 describe("insight", () => {
   const categories: Category[] = [
-    { id: "makan", name: "Makan", type: "expense", sort_order: 0 },
-    { id: "kos", name: "Kos", type: "expense", sort_order: 1 },
+    { id: "makan", name: "Makan", type: "expense", sort_order: 0, default_amount: null },
+    { id: "kos", name: "Kos", type: "expense", sort_order: 1, default_amount: null },
   ];
 
   it("kosong bila tidak ada data", () => {

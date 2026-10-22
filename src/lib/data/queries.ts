@@ -49,7 +49,7 @@ export async function getAccounts(supabase: SupabaseClient): Promise<AccountWith
 export async function getCategories(supabase: SupabaseClient): Promise<Category[]> {
   const res = await supabase
     .from("categories")
-    .select("id, name, type, sort_order")
+    .select("id, name, type, sort_order, default_amount")
     .order("type")
     .order("sort_order")
     .order("name");

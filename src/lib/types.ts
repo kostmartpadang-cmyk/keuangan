@@ -29,6 +29,8 @@ export interface Category {
   name: string;
   type: CategoryType;
   sort_order: number;
+  /** Nominal tetap yang diisikan otomatis di form transaksi (null = tidak ada). */
+  default_amount: number | null;
 }
 
 export interface Transaction {

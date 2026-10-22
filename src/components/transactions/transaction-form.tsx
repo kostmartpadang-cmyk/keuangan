@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useRunAction } from "@/hooks/use-run-action";
 import { COUNT_MODES, PAYMENT_METHOD_LABELS, TRANSACTION_TYPE_LABELS, countModeOf, type CountMode } from "@/lib/constants";
+import { formatRupiah } from "@/lib/money";
 import type { Account, Category, PaymentMethod, Transaction, TransactionType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { transactionSchema } from "@/lib/validation";
@@ -60,6 +61,19 @@ export function TransactionForm({
 
   const typeCategories = categories.filter((c) => c.type === type);
   const isTransfer = type === "transfer";
+
+  // Nominal tetap kategori (mis. transportasi) mengisi nominal otomatis, selama nominal belum diubah manual.
+  const lastAuto = useRef(0);
+  const selected = typeCategories.find((c) => c.id === categoryId);
+
+  function changeCategory(id: string) {
+    setCategoryId(id);
+    const fixed = categories.find((c) => c.id === id)?.default_amount ?? 0;
+    if (fixed > 0 && type === "expense" && (amount === 0 || amount === lastAuto.current)) {
+      setAmount(fixed);
+      lastAuto.current = fixed;
+    }
+  }
 
   function changeType(next: TransactionType) {
     setType(next);
@@ -139,13 +153,22 @@ export function TransactionForm({
         ))}
       </div>
 
-      <Field label="Nominal" htmlFor="amount" error={errors.amount}>
+      <Field
+        label="Nominal"
+        htmlFor="amount"
+        error={errors.amount}
+        hint={
+          selected?.default_amount && type === "expense"
+            ? `Nominal tetap ${selected.name}: ${formatRupiah(selected.default_amount)}. Boleh diubah untuk transaksi ini.`
+            : undefined
+        }
+      >
         <MoneyInput id="amount" value={amount} onChange={setAmount} invalid={!!errors.amount} autoFocus={!editing} />
       </Field>
 
       {!isTransfer && (
         <Field label="Kategori" htmlFor="category" error={errors.category_id}>
-          <NativeSelect id="category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} aria-invalid={!!errors.category_id}>
+          <NativeSelect id="category" value={categoryId} onChange={(e) => changeCategory(e.target.value)} aria-invalid={!!errors.category_id}>
             <option value="">Pilih kategori…</option>
             {typeCategories.map((c) => (
               <option key={c.id} value={c.id}>

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { dbError, fail, parseInput, success } from "@/lib/action";
 import { withAuth } from "@/lib/data/auth";
-import { categorySchema, idSchema, nameSchema } from "@/lib/validation";
+import { amountSchema, categorySchema, idSchema, nameSchema } from "@/lib/validation";
 import { z } from "zod";
 
 export async function createCategory(input: { name: string; type: "income" | "expense" }) {
@@ -31,14 +31,18 @@ export async function createCategory(input: { name: string; type: "income" | "ex
   });
 }
 
-export async function renameCategory(id: string, name: string) {
-  const parsed = parseInput(z.object({ id: idSchema, name: nameSchema("Nama kategori") }), { id, name });
+/** Ubah nama dan/atau nominal tetap kategori (`default_amount` null = hapus nominal tetap). */
+export async function updateCategory(id: string, input: { name: string; default_amount: number | null }) {
+  const parsed = parseInput(
+    z.object({ id: idSchema, name: nameSchema("Nama kategori"), default_amount: amountSchema.nullable() }),
+    { id, ...input },
+  );
   if (!parsed.ok) return fail(parsed.error, parsed.fieldErrors);
 
   return withAuth(async ({ supabase }) => {
     const { data, error } = await supabase
       .from("categories")
-      .update({ name: parsed.data.name })
+      .update({ name: parsed.data.name, default_amount: parsed.data.default_amount })
       .eq("id", parsed.data.id)
       .select("id")
       .maybeSingle();
