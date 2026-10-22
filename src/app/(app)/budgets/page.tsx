@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AlertTriangle, OctagonAlert } from "lucide-react";
+import { BudgetTabs } from "@/components/budgets/budget-tabs";
 import { SetBudgetButton } from "@/components/budgets/set-budget-button";
 import { Money, PageHeader, ProgressBar, SectionCard } from "@/components/shared/ui-bits";
 import { BUDGET_WARN_RATIO } from "@/lib/constants";
@@ -16,7 +16,7 @@ import {
   spentInPeriod,
   type BudgetLevel,
 } from "@/lib/finance/budgets";
-import type { BudgetPeriodType } from "@/lib/types";
+import type { Budget, BudgetPeriodType, Category, TransactionLite } from "@/lib/types";
 import { first } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
@@ -40,26 +40,57 @@ const LEVEL_CLS: Record<BudgetLevel, string> = {
 export default async function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
   const sp = await searchParams;
   const { supabase } = await requireUser();
-  const type: BudgetPeriodType = first(sp.tab) === "monthly" ? "monthly" : "weekly";
+  const initial: BudgetPeriodType = first(sp.tab) === "monthly" ? "monthly" : "weekly";
   const today = todayJakarta();
 
-  // Cukup mengambil transaksi mulai dari riwayat tertua yang ditampilkan.
-  const historyFrom =
-    type === "weekly"
-      ? addDays(weekStart(today), -7 * HISTORY_COUNT.weekly)
-      : monthStart(addMonths(today, -HISTORY_COUNT.monthly));
+  // Satu pengambilan data untuk kedua tab (mulai dari riwayat tertua), agar pindah tab tidak perlu ke server.
+  const historyFrom = [historyFromOf("weekly", today), historyFromOf("monthly", today)].sort()[0];
 
   const [categories, budgets, txs] = await Promise.all([
     getCategories(supabase),
     getBudgets(supabase),
     getTransactionsInRange(supabase, historyFrom, today),
   ]);
+  const expenseCats = categories.filter((c) => c.type === "expense");
+  const data = { today, txs, budgets, expenseCats };
 
+  return (
+    <div className="grid gap-5">
+      <PageHeader
+        title="Anggaran"
+        description="Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan kalender."
+      />
+      <BudgetTabs
+        initial={initial}
+        panels={{ weekly: <BudgetPanel type="weekly" {...data} />, monthly: <BudgetPanel type="monthly" {...data} /> }}
+      />
+    </div>
+  );
+}
+
+function historyFromOf(type: BudgetPeriodType, today: string) {
+  return type === "weekly"
+    ? addDays(weekStart(today), -7 * HISTORY_COUNT.weekly)
+    : monthStart(addMonths(today, -HISTORY_COUNT.monthly));
+}
+
+function BudgetPanel({
+  type,
+  today,
+  txs,
+  budgets,
+  expenseCats,
+}: {
+  type: BudgetPeriodType;
+  today: string;
+  txs: TransactionLite[];
+  budgets: Budget[];
+  expenseCats: Category[];
+}) {
   const start = periodStartOf(type, today);
   const end = periodEndOf(type, start);
   const periodLabel = type === "weekly" ? formatRange(start, end) : formatMonthYear(start);
   const total = budgetStatus(spentInPeriod(txs, type, null, start, end), resolveLimit(budgets, type, null, start));
-  const expenseCats = categories.filter((c) => c.type === "expense");
   const rows = expenseCats.map((c) => ({
     category: c,
     status: budgetStatus(spentInPeriod(txs, type, c.id, start, end), resolveLimit(budgets, type, c.id, start)),
@@ -68,29 +99,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
   const history = budgetHistory(budgets, txs, type, today, HISTORY_COUNT[type]);
 
   return (
-    <div className="grid gap-5">
-      <PageHeader
-        title="Anggaran"
-        description="Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan kalender."
-      />
-
-      <div role="tablist" aria-label="Jenis anggaran" className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1 sm:w-80">
-        {(["weekly", "monthly"] as const).map((t) => (
-          <Link
-            key={t}
-            role="tab"
-            aria-selected={type === t}
-            href={t === "weekly" ? "/budgets" : "/budgets?tab=monthly"}
-            className={cn(
-              "rounded-xl py-2 text-center text-sm font-semibold transition-colors",
-              type === t ? "bg-card shadow-sm" : "text-muted-foreground",
-            )}
-          >
-            {t === "weekly" ? "Mingguan" : "Bulanan"}
-          </Link>
-        ))}
-      </div>
-
+    <>
       <SectionCard
         title={`Total ${type === "weekly" ? "minggu ini" : "bulan ini"}`}
         description={periodLabel}
@@ -236,6 +245,6 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
           </tbody>
         </table>
       </SectionCard>
-    </div>
+    </>
   );
 }
