@@ -15,6 +15,30 @@ export const PLAN_TEMPLATE: { name: string; kind: PlanItemKind; category: string
   { name: "Hadiah atau traktiran", kind: "budget", category: "Hadiah untuk teman" },
 ];
 
+/** Perkiraan porsi gaji per pos bila belum ada riwayat pengeluaran (pos tetap tidak ditebak). */
+export const FALLBACK_SHARE: Record<string, number> = {
+  Makan: 0.2,
+  "Belanja bahan masak": 0.1,
+  Transportasi: 0.07,
+  "Kebutuhan harian": 0.03,
+  "Skincare dan perawatan diri": 0.03,
+  Hiburan: 0.05,
+  "Pembelian barang": 0.05,
+  "Hadiah atau traktiran": 0.02,
+};
+
+const ROUND_TO = 1000;
+
+/**
+ * Usulan nominal satu pos: rata-rata pengeluaran kategori pada bulan-bulan sebelumnya (dibulatkan ke ribuan);
+ * bila belum ada riwayat, memakai porsi tetap dari gaji; bila keduanya tidak ada, 0.
+ */
+export function suggestAmount(params: { average: number; salary: number; fallbackShare?: number }): number {
+  const { average, salary, fallbackShare } = params;
+  const raw = average > 0 ? average : fallbackShare && salary > 0 ? salary * fallbackShare : 0;
+  return Math.max(0, Math.round(raw / ROUND_TO) * ROUND_TO);
+}
+
 export interface PlanSummary {
   salary: number;
   fixedTotal: number;

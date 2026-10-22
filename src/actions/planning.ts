@@ -5,8 +5,9 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { dbError, fail, parseInput, success } from "@/lib/action";
 import { withAuth } from "@/lib/data/auth";
-import { addMonths, isValidISODate } from "@/lib/dates";
-import { PLAN_TEMPLATE } from "@/lib/finance/plan";
+import { getTransactionsInRange } from "@/lib/data/queries";
+import { addMonths, isValidISODate, monthEnd } from "@/lib/dates";
+import { FALLBACK_SHARE, PLAN_TEMPLATE, suggestAmount } from "@/lib/finance/plan";
 import { idSchema, nonNegativeAmountSchema, planItemSchema } from "@/lib/validation";
 
 const monthSchema = z
@@ -163,5 +164,92 @@ export async function applyPlanTemplate(month: string) {
 
     revalidatePath("/", "layout");
     return success("Pos umum ditambahkan. Isi nominalnya sesuai rencana Anda.");
+  });
+}
+
+/**
+ * Buat pos rencana otomatis dari riwayat 3 bulan terakhir (atau porsi gaji bila belum ada riwayat).
+ * Hanya MENAMBAH pos yang belum ada; pos yang sudah Anda buat atau ubah tidak disentuh.
+ */
+export async function autoGeneratePlan(month: string) {
+  const m = monthSchema.safeParse(month);
+  if (!m.success) return fail("Bulan tidak valid.");
+
+  return withAuth(async ({ supabase, user }) => {
+    const planId = await ensurePlan(supabase, user.id, m.data);
+    const histFrom = addMonths(m.data, -3);
+    const histTo = monthEnd(addMonths(m.data, -1));
+
+    const [{ data: plan }, { data: cats }, { data: existing }, histTxs, monthTxs] = await Promise.all([
+      supabase.from("financial_plans").select("salary").eq("id", planId).single(),
+      supabase.from("categories").select("id, name, type"),
+      supabase.from("plan_items").select("name, category_id, sort_order").eq("plan_id", planId),
+      getTransactionsInRange(supabase, histFrom, histTo),
+      getTransactionsInRange(supabase, m.data, monthEnd(m.data)),
+    ]);
+
+    const categories = cats ?? [];
+    const salaryCat = categories.find((c) => c.type === "income" && String(c.name).trim().toLowerCase() === "gaji");
+    const incomeOf = (txs: typeof histTxs) =>
+      salaryCat ? txs.filter((t) => t.type === "income" && t.category_id === salaryCat.id) : [];
+    const thisMonthSalary = incomeOf(monthTxs).reduce((s, t) => s + t.amount, 0);
+    const histSalaryMonths = new Set(incomeOf(histTxs).map((t) => t.tx_date.slice(0, 7)));
+    const histSalary = incomeOf(histTxs).reduce((s, t) => s + t.amount, 0) / Math.max(1, histSalaryMonths.size);
+    const salary = thisMonthSalary || (plan?.salary ?? 0) || Math.round(histSalary);
+
+    // Rata-rata pengeluaran per kategori pada bulan-bulan yang punya data.
+    const spendMonths = new Set<string>();
+    const sumByCat = new Map<string, number>();
+    for (const t of histTxs) {
+      if (t.type !== "expense" || !t.category_id) continue;
+      spendMonths.add(t.tx_date.slice(0, 7));
+      sumByCat.set(t.category_id, (sumByCat.get(t.category_id) ?? 0) + t.amount);
+    }
+    const divisor = Math.max(1, spendMonths.size);
+    const avgOf = (categoryId: string | null) => (categoryId ? (sumByCat.get(categoryId) ?? 0) / divisor : 0);
+
+    const items = existing ?? [];
+    const takenNames = new Set(items.map((i) => String(i.name).trim().toLowerCase()));
+    const takenCats = new Set(items.map((i) => i.category_id).filter(Boolean) as string[]);
+    const expenseCats = categories.filter((c) => c.type === "expense");
+    const byName = new Map(expenseCats.map((c) => [String(c.name), String(c.id)]));
+
+    const rows: { name: string; kind: "fixed" | "budget"; category_id: string | null; amount: number }[] = [];
+    const claim = (name: string, kind: "fixed" | "budget", categoryId: string | null, amount: number) => {
+      rows.push({ name, kind, category_id: categoryId, amount });
+      takenNames.add(name.trim().toLowerCase());
+      if (categoryId) takenCats.add(categoryId);
+    };
+
+    for (const t of PLAN_TEMPLATE) {
+      const categoryId = t.category ? (byName.get(t.category) ?? null) : null;
+      if (takenNames.has(t.name.toLowerCase()) || (categoryId && takenCats.has(categoryId))) continue;
+      const amount = suggestAmount({ average: avgOf(categoryId), salary, fallbackShare: FALLBACK_SHARE[t.name] });
+      claim(t.name, t.kind, categoryId, amount);
+    }
+    // Kategori lain yang rutin dipakai tetapi tidak ada di template.
+    for (const c of expenseCats) {
+      const categoryId = String(c.id);
+      const name = String(c.name);
+      const average = avgOf(categoryId);
+      if (average <= 0 || takenCats.has(categoryId) || takenNames.has(name.trim().toLowerCase())) continue;
+      claim(name, "budget", categoryId, suggestAmount({ average, salary }));
+    }
+
+    if (rows.length === 0) return fail("Semua pos umum sudah ada di rencana bulan ini.");
+
+    const start = items.reduce((max, i) => Math.max(max, Number(i.sort_order) + 1), 0);
+    const { error } = await supabase
+      .from("plan_items")
+      .insert(rows.map((r, i) => ({ ...r, user_id: user.id, plan_id: planId, sort_order: start + i })));
+    if (error) return fail(dbError(error, "Perencanaan otomatis gagal dibuat."));
+
+    if (!plan?.salary && salary > 0 && !thisMonthSalary) {
+      await supabase.from("financial_plans").update({ salary }).eq("id", planId);
+    }
+
+    revalidatePath("/", "layout");
+    const basis = spendMonths.size > 0 ? `rata-rata ${spendMonths.size} bulan terakhir` : "porsi dari gaji";
+    return success(`${rows.length} pos dibuat otomatis (${basis}). Silakan ubah nominalnya bila perlu.`);
   });
 }

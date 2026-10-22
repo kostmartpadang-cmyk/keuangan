@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CopyPlus, Loader2, Pencil, Plus, Sparkles, WalletCards } from "lucide-react";
-import { applyPlanTemplate, copyPlanFromPreviousMonth, deletePlanItem, savePlanItem, savePlanSalary } from "@/actions/planning";
+import { CopyPlus, Loader2, Pencil, Plus, Sparkles, WalletCards, Wand2 } from "lucide-react";
+import { applyPlanTemplate, autoGeneratePlan, copyPlanFromPreviousMonth, deletePlanItem, savePlanItem, savePlanSalary } from "@/actions/planning";
 import { Field, MoneyInput, NativeSelect } from "@/components/forms/fields";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete";
 import { EmptyState, Money, SectionCard } from "@/components/shared/ui-bits";
@@ -168,21 +168,29 @@ export function PlanEditor({
       <SectionCard
         title="Pos rencana"
         actions={
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => setEditing("new")}>
-            <Plus aria-hidden /> Tambah pos
-          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="outline" size="sm" className="gap-1" disabled={pending} onClick={() => run(() => autoGeneratePlan(month))}>
+              <Wand2 aria-hidden /> Buat otomatis
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1" onClick={() => setEditing("new")}>
+              <Plus aria-hidden /> Tambah pos
+            </Button>
+          </div>
         }
       >
         {items.length === 0 ? (
           <EmptyState
             icon={WalletCards}
             title="Belum ada pos rencana"
-            description="Tambah pos satu per satu, mulai dari pos umum, atau salin dari bulan sebelumnya."
+            description="Buat otomatis dari riwayat pengeluaran Anda, atau tambah pos satu per satu secara manual."
             className="border-0 py-6"
             action={
               <div className="flex flex-wrap justify-center gap-2">
-                <Button className="rounded-xl" disabled={pending} onClick={() => run(() => applyPlanTemplate(month))}>
-                  <Sparkles aria-hidden /> Pakai pos umum
+                <Button className="rounded-xl" disabled={pending} onClick={() => run(() => autoGeneratePlan(month))}>
+                  <Wand2 aria-hidden /> Buat otomatis
+                </Button>
+                <Button variant="outline" className="rounded-xl" disabled={pending} onClick={() => run(() => applyPlanTemplate(month))}>
+                  <Sparkles aria-hidden /> Pos umum (kosong)
                 </Button>
                 {canCopyPrevious && (
                   <Button variant="outline" className="rounded-xl" disabled={pending} onClick={() => run(() => copyPlanFromPreviousMonth(month))}>
