@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyWeeklyBudgetIfLow } from "@/lib/push";
 import { dbError, fail, parseInput, success } from "@/lib/action";
 import { withAuth } from "@/lib/data/auth";
 import { idSchema, transactionSchema, type TransactionInput } from "@/lib/validation";
@@ -49,8 +51,11 @@ export async function saveTransaction(id: string | null, input: TransactionInput
       if (error && !duplicate) return fail(dbError(error, "Transaksi gagal disimpan."));
     }
 
+    // Setelah respons dikirim: cek sisa anggaran mingguan dan kirim notifikasi push bila perlu.
+    after(() => notifyWeeklyBudgetIfLow(supabase).catch((e) => console.error("[push]", e)));
+
     revalidatePath("/", "layout");
-    return success(id ? "Transaksi diperbarui." : "Transaksi disimpan.");
+    return success(id ?"Transaksi diperbarui." : "Transaksi disimpan.");
   });
 }
 

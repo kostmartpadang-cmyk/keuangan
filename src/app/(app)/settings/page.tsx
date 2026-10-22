@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Download } from "lucide-react";
+import { NotificationToggle } from "@/components/pwa/notifications";
 import { InstallButton } from "@/components/pwa/install";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CategoriesManager, PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
@@ -32,6 +33,10 @@ export default async function SettingsPage() {
           <span className="text-muted-foreground">Mata uang Rupiah (IDR) · zona waktu Asia/Jakarta</span>
           <ThemeToggle withLabel />
         </div>
+      </SectionCard>
+
+      <SectionCard title="Notifikasi" description="Dapatkan pemberitahuan di HP saat sisa anggaran mingguan tinggal 10% atau terlampaui.">
+        <NotificationToggle />
       </SectionCard>
 
       <SectionCard title="Aplikasi" description="Pasang RuangUang di layar utama agar terbuka seperti aplikasi biasa.">
