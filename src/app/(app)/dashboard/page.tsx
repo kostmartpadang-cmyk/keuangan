@@ -35,14 +35,18 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   // Anggaran & insight selalu memakai bulan lalu s.d. hari ini, terlepas dari filter periode.
   const wideFrom = monthStart(addMonths(today, -1));
 
-  const [accounts, categories, budgets, periodTxs, wideTxs, recent] = await Promise.all([
+  // Periode yang sudah tercakup rentang lebar (mis. bulan ini) disaring dari data yang sama, tanpa query tambahan.
+  const periodInsideWide = period.from >= wideFrom && period.to <= today;
+
+  const [accounts, categories, budgets, wideTxs, periodFetched, recent] = await Promise.all([
     getAccounts(supabase),
     getCategories(supabase),
     getBudgets(supabase),
-    getTransactionsInRange(supabase, period.from, period.to),
     getTransactionsInRange(supabase, wideFrom, today),
+    periodInsideWide ? Promise.resolve(null) : getTransactionsInRange(supabase, period.from, period.to),
     getRecentTransactions(supabase, 6),
   ]);
+  const periodTxs = periodFetched ?? wideTxs.filter((t) => t.tx_date >= period.from && t.tx_date <= period.to);
 
   const activeAccounts = accounts.filter((a) => !a.is_archived);
   const totalBalance = activeAccounts.reduce((s, a) => s + a.balance, 0);

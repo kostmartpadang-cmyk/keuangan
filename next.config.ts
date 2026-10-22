@@ -9,6 +9,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Halaman dinamis yang baru dikunjungi dipakai ulang 30 dtk di klien, jadi berpindah bolak-balik terasa instan.
+    // Setelah menyimpan data, revalidatePath() otomatis membuang cache ini.
+    staleTimes: { dynamic: 30, static: 180 },
+  },
   turbopack: {
     rules: {
       "*.css": {

@@ -30,10 +30,9 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  // getUser() memvalidasi token ke server Auth (jangan ganti dengan getSession()).
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() memverifikasi JWT secara lokal dan menyegarkan token bila kedaluwarsa (jangan ganti dengan getSession()).
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const { pathname } = request.nextUrl;
 

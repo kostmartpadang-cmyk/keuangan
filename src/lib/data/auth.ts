@@ -1,22 +1,37 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { fail, type ActionResult } from "@/lib/action";
 
+/** Pengguna terautentikasi (dari klaim JWT yang sudah diverifikasi). */
+export interface AuthUser {
+  id: string;
+  email?: string;
+}
+
 export interface AuthContext {
   supabase: SupabaseClient;
-  user: User;
+  user: AuthUser;
+}
+
+/**
+ * Verifikasi sesi lewat getClaims(): tanda tangan JWT diperiksa secara lokal (kunci publik di-cache),
+ * jadi tidak perlu round-trip ke server Auth di setiap navigasi seperti getUser().
+ */
+async function authUser(supabase: SupabaseClient): Promise<AuthUser | null> {
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return { id: claims.sub, email: typeof claims.email === "string" ? claims.email : undefined };
 }
 
 /** Konteks terautentikasi untuk Server Component; dialihkan ke /login bila tidak ada sesi. */
 export const requireUser = cache(async (): Promise<AuthContext> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await authUser(supabase);
   if (!user) redirect("/login");
   return { supabase, user };
 });
@@ -24,9 +39,7 @@ export const requireUser = cache(async (): Promise<AuthContext> => {
 /** Konteks untuk Server Action; mengembalikan null bila sesi sudah berakhir. */
 export async function getActionContext(): Promise<AuthContext | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await authUser(supabase);
   if (!user) return null;
   return { supabase, user };
 }
