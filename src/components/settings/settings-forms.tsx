@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Loader2, Pencil, Plus } from "lucide-react";
-import { updatePassword, updateProfile } from "@/actions/auth";
+import { updateMonthStartDay, updatePassword, updateProfile } from "@/actions/auth";
 import { createCategory, deleteCategory, updateCategory } from "@/actions/categories";
-import { Field, MoneyInput } from "@/components/forms/fields";
+import { Field, MoneyInput, NativeSelect } from "@/components/forms/fields";
 import { formatRupiah } from "@/lib/money";
 import { ConfirmDeleteButton } from "@/components/shared/confirm-delete";
 import { Button } from "@/components/ui/button";
@@ -196,5 +196,43 @@ export function CategoriesManager({ categories }: { categories: Category[] }) {
       <CategoryColumn title="Kategori pemasukan" type="income" items={categories.filter((c) => c.type === "income")} />
       <CategoryColumn title="Kategori pengeluaran" type="expense" items={categories.filter((c) => c.type === "expense")} />
     </div>
+  );
+}
+
+/** Pilih tanggal mulai "bulan" (mis. tanggal gajian) untuk anggaran bulanan, ringkasan, dan laporan. */
+export function MonthStartForm({ day }: { day: number }) {
+  const { run, pending } = useRunAction();
+  const [value, setValue] = useState(day);
+  const [error, setError] = useState<string>();
+
+  return (
+    <form
+      noValidate
+      className="flex flex-wrap items-end gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        setError(undefined);
+        run(() => updateMonthStartDay(value), { onError: (r) => setError(r.error) });
+      }}
+    >
+      <Field
+        label="Bulan dimulai tanggal"
+        htmlFor="month-start"
+        error={error}
+        hint={value > 1 ? `Contoh: bulan berjalan dihitung dari tanggal ${value} sampai tanggal ${value - 1} bulan berikutnya.` : "Bulan kalender biasa (tanggal 1 sampai akhir bulan)."}
+        className="min-w-52 flex-1"
+      >
+        <NativeSelect id="month-start" value={value} onChange={(e) => setValue(Number(e.target.value))}>
+          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+            <option key={d} value={d}>
+              {d === 1 ? "Tanggal 1 (bulan kalender)" : `Tanggal ${d}`}
+            </option>
+          ))}
+        </NativeSelect>
+      </Field>
+      <Button type="submit" className="h-12 rounded-xl sm:h-10" disabled={pending || value === day}>
+        {pending && <Loader2 className="animate-spin" aria-hidden />} Simpan
+      </Button>
+    </form>
   );
 }

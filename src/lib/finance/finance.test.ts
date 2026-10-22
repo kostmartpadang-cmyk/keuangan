@@ -244,3 +244,16 @@ describe("CSV", () => {
     expect(toCsv(["a"], [["x"]]).startsWith("﻿")).toBe(true);
   });
 });
+
+describe("periode bulan dengan tanggal mulai (gajian)", () => {
+  it("cycleStart/cycleEnd mengikuti tanggal mulai", async () => {
+    const { cycleStart, cycleEnd, addCycles } = await import("../dates");
+    expect(cycleStart("2026-10-24", 25)).toBe("2026-09-25");
+    expect(cycleStart("2026-10-25", 25)).toBe("2026-10-25");
+    expect(cycleStart("2026-01-10", 25)).toBe("2025-12-25");
+    expect(cycleEnd("2026-10-25", 25)).toBe("2026-11-24");
+    expect(addCycles("2026-10-25", -1, 25)).toBe("2026-09-25");
+    expect(cycleStart("2026-10-24", 1)).toBe("2026-10-01");
+    expect(cycleEnd("2026-10-01", 1)).toBe("2026-10-31");
+  });
+});

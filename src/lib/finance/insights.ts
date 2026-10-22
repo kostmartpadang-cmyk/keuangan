@@ -1,4 +1,4 @@
-import { addDays, addMonths, daysBetween, formatDayMonth, monthEnd, monthStart, type ISODate } from "../dates";
+import { addCycles, addDays, cycleEnd, cycleStart, daysBetween, formatDayMonth, type ISODate } from "../dates";
 import { BUDGET_LOW_REMAINING_RATIO } from "../constants";
 import { formatRupiah } from "../money";
 import type { Category, TransactionLite } from "../types";
@@ -27,15 +27,17 @@ export function buildInsights(params: {
   budgets: Budget[];
   categories: Category[];
   today: ISODate;
+  /** Tanggal mulai "bulan" (mis. gajian); bawaan 1. `txs` harus mencakup awal bulan sebelumnya. */
+  startDay?: number;
 }): Insight[] {
-  const { txs, budgets, categories, today } = params;
+  const { txs, budgets, categories, today, startDay = 1 } = params;
   const nameOf = (id: string | null) => categories.find((c) => c.id === id)?.name ?? "Tanpa kategori";
   const out: Insight[] = [];
 
-  const thisStart = monthStart(today);
-  const lastStart = addMonths(today, -1);
+  const thisStart = cycleStart(today, startDay);
+  const lastStart = addCycles(thisStart, -1, startDay);
   const dayOfMonth = daysBetween(thisStart, today); // 0-based
-  const lastSameDay = [addDays(lastStart, dayOfMonth), monthEnd(lastStart)].sort()[0];
+  const lastSameDay = [addDays(lastStart, dayOfMonth), cycleEnd(lastStart, startDay)].sort()[0];
 
   const thisMonth = txs.filter((t) => t.tx_date >= thisStart && t.tx_date <= today);
   const lastMonthSamePeriod = txs.filter((t) => t.tx_date >= lastStart && t.tx_date <= lastSameDay);
@@ -82,8 +84,8 @@ export function buildInsights(params: {
 
   // 3. Anggaran hampir habis / terlampaui
   for (const type of ["weekly", "monthly"] as const) {
-    const start = periodStartOf(type, today);
-    const end = periodEndOf(type, start);
+    const start = periodStartOf(type, today, startDay);
+    const end = periodEndOf(type, start, startDay);
     const periodName = type === "weekly" ? "mingguan" : "bulanan";
 
     const total = budgetStatus(

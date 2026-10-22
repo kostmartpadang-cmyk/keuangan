@@ -2,14 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { dbError, fail, parseInput, success } from "@/lib/action";
-import { withAuth } from "@/lib/data/auth";
+import { getMonthStartDay, withAuth } from "@/lib/data/auth";
 import { todayJakarta } from "@/lib/dates";
 import { periodStartOf } from "@/lib/finance/budgets";
 import { budgetSchema } from "@/lib/validation";
 import type { BudgetPeriodType } from "@/lib/types";
 
 /**
- * Atur batas anggaran mulai periode berjalan (Senin untuk mingguan, tanggal 1 untuk bulanan).
+ * Atur batas anggaran mulai periode berjalan (Senin untuk mingguan, tanggal mulai bulan untuk bulanan).
  * Batas tetap berlaku untuk periode berikutnya sampai diubah; amount 0 = tanpa batas.
  */
 export async function setBudget(input: {
@@ -22,7 +22,7 @@ export async function setBudget(input: {
 
   return withAuth(async ({ supabase, user }) => {
     const { period_type, category_id, amount } = parsed.data;
-    const period_start = periodStartOf(period_type, todayJakarta());
+    const period_start = periodStartOf(period_type, todayJakarta(), await getMonthStartDay(supabase, user.id));
 
     let find = supabase
       .from("budgets")

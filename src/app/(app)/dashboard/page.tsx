@@ -17,7 +17,7 @@ import {
   getRecentTransactions,
   getTransactionsInRange,
 } from "@/lib/data/queries";
-import { addMonths, formatRange, monthStart, periodFromSearchParams, todayJakarta } from "@/lib/dates";
+import { addMonths, formatRange, monthEnd, monthStart, periodFromSearchParams, todayJakarta } from "@/lib/dates";
 import { expenseByCategory, incomeExpenseSeries, totalsOf } from "@/lib/finance/aggregate";
 import { currentBudgetOverview } from "@/lib/finance/budgets";
 import { buildInsights } from "@/lib/finance/insights";
@@ -30,23 +30,30 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
   const sp = await searchParams;
   const { supabase } = await requireUser();
   const today = todayJakarta();
-  const period = periodFromSearchParams(sp);
-  // Anggaran & insight selalu memakai bulan lalu s.d. hari ini, terlepas dari filter periode.
-  const wideFrom = monthStart(addMonths(today, -1));
+  // Anggaran & insight memakai awal bulan sebelumnya s.d. hari ini. Batas bawah dibuat longgar (2 bulan kalender)
+  // agar mencakup tanggal mulai bulan berapa pun tanpa menunggu profil dimuat lebih dulu.
+  const wideFrom = monthStart(addMonths(today, -2));
+  const wideTo = monthEnd(addMonths(today, 1)); // juga mencakup transaksi bertanggal ke depan di periode berjalan
+  const requested = periodFromSearchParams(sp);
 
   // Periode yang sudah tercakup rentang lebar (mis. bulan ini) disaring dari data yang sama, tanpa query tambahan.
-  const periodInsideWide = period.from >= wideFrom && period.to <= today;
+  const periodInsideWide = requested.from >= wideFrom && requested.to <= wideTo;
 
-  const [profile, accounts, categories, budgets, wideTxs, periodFetched, recent] = await Promise.all([
+  const [profile, accounts, categories, budgets, allTxs, periodFetched, recent] = await Promise.all([
     getProfile(),
     getAccounts(supabase),
     getCategories(supabase),
     getBudgets(supabase),
-    getTransactionsInRange(supabase, wideFrom, today),
-    periodInsideWide ? Promise.resolve(null) : getTransactionsInRange(supabase, period.from, period.to),
+    getTransactionsInRange(supabase, wideFrom, wideTo),
+    periodInsideWide ? Promise.resolve(null) : getTransactionsInRange(supabase, requested.from, requested.to),
     getRecentTransactions(supabase, 6),
   ]);
-  const periodTxs = periodFetched ?? wideTxs.filter((t) => t.tx_date >= period.from && t.tx_date <= period.to);
+  const startDay = profile.month_start_day;
+  // Periode final memakai tanggal mulai bulan pengguna (rentang khusus tidak terpengaruh).
+  const period = periodFromSearchParams(sp, "month", startDay);
+  // Anggaran & insight hanya menghitung sampai hari ini.
+  const wideTxs = allTxs.filter((t) => t.tx_date <= today);
+  const periodTxs = periodFetched ?? allTxs.filter((t) => t.tx_date >= period.from && t.tx_date <= period.to);
 
   const activeAccounts = accounts.filter((a) => !a.is_archived);
   const totalBalance = activeAccounts.reduce((s, a) => s + a.balance, 0);
@@ -62,8 +69,8 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
 
   const expenseCats = categories.filter((c) => c.type === "expense");
   const weekly = currentBudgetOverview(budgets, wideTxs, expenseCats, "weekly", today);
-  const monthly = currentBudgetOverview(budgets, wideTxs, expenseCats, "monthly", today);
-  const insights = buildInsights({ txs: wideTxs, budgets, categories, today });
+  const monthly = currentBudgetOverview(budgets, wideTxs, expenseCats, "monthly", today, startDay);
+  const insights = buildInsights({ txs: wideTxs, budgets, categories, today, startDay });
   const reminders = insights.filter((i) => i.tone === "warning" || i.tone === "danger").filter((i) => i.id.startsWith("budget-"));
   const otherInsights = insights.filter((i) => !reminders.includes(i));
 

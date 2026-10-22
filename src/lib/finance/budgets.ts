@@ -1,17 +1,18 @@
-import { addDays, addMonths, monthEnd, monthStart, weekEnd, weekStart, type ISODate } from "../dates";
+import { addCycles, addDays, cycleEnd, cycleStart, weekEnd, weekStart, type ISODate } from "../dates";
 import { BUDGET_WARN_RATIO } from "../constants";
 import type { Budget, BudgetPeriodType, TransactionLite } from "../types";
 
-export function periodStartOf(type: BudgetPeriodType, date: ISODate): ISODate {
-  return type === "weekly" ? weekStart(date) : monthStart(date);
+/** `startDay` = tanggal mulai "bulan" (mis. tanggal gajian); hanya berpengaruh pada anggaran bulanan. */
+export function periodStartOf(type: BudgetPeriodType, date: ISODate, startDay = 1): ISODate {
+  return type === "weekly" ? weekStart(date) : cycleStart(date, startDay);
 }
 
-export function periodEndOf(type: BudgetPeriodType, start: ISODate): ISODate {
-  return type === "weekly" ? weekEnd(start) : monthEnd(start);
+export function periodEndOf(type: BudgetPeriodType, start: ISODate, startDay = 1): ISODate {
+  return type === "weekly" ? weekEnd(start) : cycleEnd(start, startDay);
 }
 
-export function previousPeriodStart(type: BudgetPeriodType, start: ISODate): ISODate {
-  return type === "weekly" ? addDays(start, -7) : addMonths(start, -1);
+export function previousPeriodStart(type: BudgetPeriodType, start: ISODate, startDay = 1): ISODate {
+  return type === "weekly" ? addDays(start, -7) : addCycles(start, -1, startDay);
 }
 
 /**
@@ -83,14 +84,15 @@ export function budgetHistory(
   type: BudgetPeriodType,
   today: ISODate,
   count: number,
+  startDay = 1,
 ): BudgetHistoryRow[] {
   const rows: BudgetHistoryRow[] = [];
-  let start = previousPeriodStart(type, periodStartOf(type, today));
+  let start = previousPeriodStart(type, periodStartOf(type, today, startDay), startDay);
   for (let i = 0; i < count; i++) {
-    const end = periodEndOf(type, start);
+    const end = periodEndOf(type, start, startDay);
     const limit = resolveLimit(budgets, type, null, start);
     rows.push({ start, end, status: budgetStatus(spentInPeriod(txs, type, null, start, end), limit) });
-    start = previousPeriodStart(type, start);
+    start = previousPeriodStart(type, start, startDay);
   }
   return rows;
 }
@@ -115,9 +117,10 @@ export function currentBudgetOverview(
   expenseCategories: { id: string; name: string }[],
   type: BudgetPeriodType,
   today: ISODate,
+  startDay = 1,
 ): BudgetOverview {
-  const start = periodStartOf(type, today);
-  const end = periodEndOf(type, start);
+  const start = periodStartOf(type, today, startDay);
+  const end = periodEndOf(type, start, startDay);
   const total = budgetStatus(spentInPeriod(txs, type, null, start, end), resolveLimit(budgets, type, null, start));
   const categories: CategoryBudgetStatus[] = [];
   for (const c of expenseCategories) {

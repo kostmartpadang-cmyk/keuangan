@@ -122,3 +122,17 @@ export async function updateProfile(input: { full_name: string }): Promise<Actio
   revalidatePath("/", "layout");
   return success("Profil diperbarui.");
 }
+
+/** Atur tanggal mulai "bulan" (mis. tanggal gajian) untuk periode bulanan. */
+export async function updateMonthStartDay(day: number): Promise<ActionResult> {
+  if (!Number.isInteger(day) || day < 1 || day > 28) return fail("Pilih tanggal 1 sampai 28.");
+
+  const ctx = await getActionContext();
+  if (!ctx) return fail("Sesi Anda berakhir. Silakan masuk kembali.");
+
+  const { error } = await ctx.supabase.from("profiles").update({ month_start_day: day }).eq("id", ctx.user.id);
+  if (error) return fail("Tanggal gagal disimpan. Pastikan migrasi database sudah dijalankan.");
+
+  revalidatePath("/", "layout");
+  return success(day === 1 ? "Bulan dihitung mengikuti kalender (tanggal 1)." : `Bulan sekarang dihitung dari tanggal ${day}.`);
+}

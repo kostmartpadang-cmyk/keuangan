@@ -59,6 +59,41 @@ export function monthEnd(s: ISODate): ISODate {
   return addDays(addMonths(s, 1), -1);
 }
 
+/** Hari mulai "bulan" yang boleh dipilih (maks. 28 agar ada di setiap bulan). */
+export const MAX_MONTH_START_DAY = 28;
+
+/** Normalisasi hari mulai bulan ke bilangan bulat 1–28 (selain itu dianggap 1). */
+export function normalizeStartDay(day: unknown): number {
+  const n = Number(day);
+  return Number.isInteger(n) && n >= 1 && n <= MAX_MONTH_START_DAY ? n : 1;
+}
+
+/**
+ * Awal "bulan" berjalan bila bulan dihitung dari tanggal `day` (mis. gajian tanggal 25:
+ * 25 Okt – 24 Nov). day = 1 sama dengan bulan kalender.
+ */
+export function cycleStart(s: ISODate, day = 1): ISODate {
+  if (day <= 1) return monthStart(s);
+  const base = Number(s.slice(8, 10)) >= day ? monthStart(s) : addMonths(s, -1);
+  return `${base.slice(0, 7)}-${String(day).padStart(2, "0")}`;
+}
+
+/** Geser n "bulan" dari awal periode `start`. */
+export function addCycles(start: ISODate, n: number, day = 1): ISODate {
+  const base = addMonths(start, n);
+  return day <= 1 ? base : `${base.slice(0, 7)}-${String(day).padStart(2, "0")}`;
+}
+
+/** Hari terakhir "bulan" yang dimulai pada `start`. */
+export function cycleEnd(start: ISODate, day = 1): ISODate {
+  return addDays(addCycles(start, 1, day), -1);
+}
+
+/** Label "bulan": nama bulan untuk bulan kalender, rentang tanggal bila mulai bukan tanggal 1. */
+export function formatCycle(start: ISODate, day = 1): string {
+  return day <= 1 ? formatMonthYear(start) : `${formatDayMonth(start)} – ${formatDayMonth(cycleEnd(start, day))}`;
+}
+
 /** 0 = Senin … 6 = Minggu */
 function isoWeekday(s: ISODate): number {
   return (parse(s).getUTCDay() + 6) % 7;
@@ -137,6 +172,7 @@ export function resolvePeriod(
   key: PeriodKey,
   custom: { from?: string; to?: string } = {},
   today: ISODate = todayJakarta(),
+  startDay = 1,
 ): Period {
   switch (key) {
     case "today":
@@ -144,8 +180,8 @@ export function resolvePeriod(
     case "week":
       return { key, from: weekStart(today), to: weekEnd(today), label: PERIOD_LABELS.week };
     case "last_month": {
-      const from = addMonths(today, -1);
-      return { key, from, to: monthEnd(from), label: PERIOD_LABELS.last_month };
+      const from = addCycles(cycleStart(today, startDay), -1, startDay);
+      return { key, from, to: cycleEnd(from, startDay), label: PERIOD_LABELS.last_month };
     }
     case "custom": {
       const f = custom.from && isValidISODate(custom.from) ? custom.from : undefined;
@@ -154,11 +190,12 @@ export function resolvePeriod(
         const [from, to] = f <= t ? [f, t] : [t, f];
         return { key, from, to, label: formatRange(from, to) };
       }
-      return resolvePeriod("month", {}, today);
+      return resolvePeriod("month", {}, today, startDay);
     }
     case "month":
     default:
-      return { key: "month", from: monthStart(today), to: monthEnd(today), label: PERIOD_LABELS.month };
+      const from = cycleStart(today, startDay);
+      return { key: "month", from, to: cycleEnd(from, startDay), label: PERIOD_LABELS.month };
   }
 }
 
@@ -166,9 +203,10 @@ export function resolvePeriod(
 export function periodFromSearchParams(
   sp: { p?: string | string[]; from?: string | string[]; to?: string | string[] },
   fallback: PeriodKey = "month",
+  startDay = 1,
 ): Period {
   const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
   const p = one(sp.p);
   const key = isPeriodKey(p) ? p : fallback;
-  return resolvePeriod(key, { from: one(sp.from), to: one(sp.to) });
+  return resolvePeriod(key, { from: one(sp.from), to: one(sp.to) }, todayJakarta(), startDay);
 }

@@ -9,6 +9,8 @@ export type PlanItemKind = "fixed" | "budget";
 export interface Profile {
   id: string;
   full_name: string | null;
+  /** Tanggal mulai "bulan" untuk periode bulanan (mis. tanggal gajian), 1–28. */
+  month_start_day: number;
 }
 
 export interface Account {

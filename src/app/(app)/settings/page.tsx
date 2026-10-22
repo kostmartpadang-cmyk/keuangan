@@ -3,7 +3,7 @@ import { Download } from "lucide-react";
 import { NotificationToggle } from "@/components/pwa/notifications";
 import { InstallButton } from "@/components/pwa/install";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { CategoriesManager, PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
+import { CategoriesManager, MonthStartForm, PasswordForm, ProfileForm } from "@/components/settings/settings-forms";
 import { PageHeader, SectionCard } from "@/components/shared/ui-bits";
 import { Button } from "@/components/ui/button";
 import { getProfile, requireUser } from "@/lib/data/auth";
@@ -27,6 +27,13 @@ export default async function SettingsPage() {
           <PasswordForm />
         </SectionCard>
       </div>
+
+      <SectionCard
+        title="Periode bulanan"
+        description="Atur tanggal gajian Anda. Anggaran bulanan, 'Bulan ini' di Beranda, dan perbandingan bulan di Laporan akan dihitung dari tanggal ini."
+      >
+        <MonthStartForm key={profile.month_start_day} day={profile.month_start_day} />
+      </SectionCard>
 
       <SectionCard title="Tampilan" description="Mengikuti pengaturan perangkat secara bawaan.">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">

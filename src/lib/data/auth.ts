@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { fail, type ActionResult } from "@/lib/action";
+import { normalizeStartDay } from "@/lib/dates";
 
 /** Pengguna terautentikasi (dari klaim JWT yang sudah diverifikasi). */
 export interface AuthUser {
@@ -47,15 +48,27 @@ export async function getActionContext(): Promise<AuthContext | null> {
 /** Profil pengguna; membuat data awal bila belum ada (cadangan untuk trigger signup). */
 export const getProfile = cache(async (): Promise<Profile> => {
   const { supabase, user } = await requireUser();
-  const read = () => supabase.from("profiles").select("id, full_name").eq("id", user.id).maybeSingle();
+  const read = async () => {
+    const res = await supabase.from("profiles").select("id, full_name, month_start_day").eq("id", user.id).maybeSingle();
+    if (!res.error) return res.data as Pick<Profile, "id" | "full_name" | "month_start_day"> | null;
+    // Kolom month_start_day belum ada (migrasi belum dijalankan): pakai bulan kalender.
+    const legacy = await supabase.from("profiles").select("id, full_name").eq("id", user.id).maybeSingle();
+    return legacy.data ? { ...(legacy.data as Pick<Profile, "id" | "full_name">), month_start_day: 1 } : null;
+  };
 
-  let { data } = await read();
+  let data = await read();
   if (!data) {
     await supabase.rpc("bootstrap_current_user");
-    ({ data } = await read());
+    data = await read();
   }
-  return (data as Profile | null) ?? { id: user.id, full_name: null };
+  return data ? { ...data, month_start_day: normalizeStartDay(data.month_start_day) } : { id: user.id, full_name: null, month_start_day: 1 };
 });
+
+/** Tanggal mulai "bulan" pengguna untuk Server Action (1 bila belum diatur / migrasi belum dijalankan). */
+export async function getMonthStartDay(supabase: SupabaseClient, userId: string): Promise<number> {
+  const { data } = await supabase.from("profiles").select("month_start_day").eq("id", userId).maybeSingle();
+  return normalizeStartDay(data?.month_start_day);
+}
 
 /** Bungkus Server Action: pastikan sesi valid, tangkap error tak terduga. */
 export async function withAuth<T = undefined>(

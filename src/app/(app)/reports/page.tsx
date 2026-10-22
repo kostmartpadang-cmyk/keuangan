@@ -7,13 +7,15 @@ import { EmptyState, Money, PageHeader, SectionCard, StatCard } from "@/componen
 import { PeriodFilter } from "@/components/shared/period-filter";
 import { TransactionRow } from "@/components/transactions/transaction-row";
 import { Button } from "@/components/ui/button";
-import { requireUser } from "@/lib/data/auth";
+import { getProfile, requireUser } from "@/lib/data/auth";
 import { getAccounts, getBudgets, getCategories, getTransactionsInRange, getFullTransactionsInRange } from "@/lib/data/queries";
 import {
+  addCycles,
   addMonths,
-  formatMonthYear,
+  cycleEnd,
+  cycleStart,
+  formatCycle,
   formatRange,
-  monthEnd,
   monthStart,
   periodFromSearchParams,
   todayJakarta,
@@ -32,7 +34,8 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const sp = await searchParams;
   const { supabase } = await requireUser();
   const today = todayJakarta();
-  const period = periodFromSearchParams(sp);
+  const startDay = (await getProfile()).month_start_day;
+  const period = periodFromSearchParams(sp, "month", startDay);
   const trendFrom = monthStart(addMonths(today, -11));
 
   const [accounts, categories, budgets, periodTxs, trendTxs, history] = await Promise.all([
@@ -55,10 +58,10 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
   const monthly = monthlyExpenseTrend(trendTxs, today, 12);
 
   // Perbandingan bulan ini vs bulan lalu per kategori (8 kategori teratas dari keduanya)
-  const thisStart = monthStart(today);
-  const lastStart = addMonths(today, -1);
+  const thisStart = cycleStart(today, startDay);
+  const lastStart = addCycles(thisStart, -1, startDay);
   const thisMonth = expenseByCategory(trendTxs.filter((t) => t.tx_date >= thisStart));
-  const lastMonth = expenseByCategory(trendTxs.filter((t) => t.tx_date >= lastStart && t.tx_date <= monthEnd(lastStart)));
+  const lastMonth = expenseByCategory(trendTxs.filter((t) => t.tx_date >= lastStart && t.tx_date <= cycleEnd(lastStart, startDay)));
   const ids = new Set([...thisMonth, ...lastMonth].map((c) => c.category_id));
   const compare = [...ids]
     .map((id) => ({
@@ -69,7 +72,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
     .sort((a, b) => b.current + b.previous - (a.current + a.previous))
     .slice(0, 8);
 
-  const insights = buildInsights({ txs: trendTxs.filter((t) => t.tx_date >= lastStart), budgets, categories, today });
+  const insights = buildInsights({ txs: trendTxs.filter((t) => t.tx_date >= lastStart), budgets, categories, today, startDay });
   const exportHref = `/api/export${buildQuery({ from: period.from, to: period.to })}`;
 
   return (
@@ -111,8 +114,8 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
         <SectionCard title="Pengeluaran per kategori" description={period.label}>
           <CategoryBreakdown items={slices} />
         </SectionCard>
-        <SectionCard title="Perbandingan antarbulan" description={`${formatMonthYear(lastStart)} vs ${formatMonthYear(thisStart)} (8 kategori teratas)`}>
-          <CompareChart data={compare} currentLabel={formatMonthYear(thisStart)} previousLabel={formatMonthYear(lastStart)} />
+        <SectionCard title="Perbandingan antarbulan" description={`${formatCycle(lastStart, startDay)} vs ${formatCycle(thisStart, startDay)} (8 kategori teratas)`}>
+          <CompareChart data={compare} currentLabel={formatCycle(thisStart, startDay)} previousLabel={formatCycle(lastStart, startDay)} />
         </SectionCard>
       </div>
 

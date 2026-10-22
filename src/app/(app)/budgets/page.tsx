@@ -4,9 +4,9 @@ import { BudgetTabs } from "@/components/budgets/budget-tabs";
 import { SetBudgetButton } from "@/components/budgets/set-budget-button";
 import { Money, PageHeader, ProgressBar, SectionCard } from "@/components/shared/ui-bits";
 import { BUDGET_WARN_RATIO } from "@/lib/constants";
-import { requireUser } from "@/lib/data/auth";
+import { getProfile, requireUser } from "@/lib/data/auth";
 import { getBudgets, getCategories, getTransactionsInRange } from "@/lib/data/queries";
-import { addDays, addMonths, formatDayMonth, formatMonthYear, formatRange, monthStart, todayJakarta, weekStart } from "@/lib/dates";
+import { addDays, addMonths, formatCycle, formatDayMonth, formatRange, monthStart, todayJakarta, weekStart } from "@/lib/dates";
 import {
   budgetHistory,
   budgetStatus,
@@ -44,21 +44,24 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
   const today = todayJakarta();
 
   // Satu pengambilan data untuk kedua tab (mulai dari riwayat tertua), agar pindah tab tidak perlu ke server.
+  // Batas bawah bulanan dibuat longgar (kalender) supaya berlaku untuk tanggal mulai bulan berapa pun.
   const historyFrom = [historyFromOf("weekly", today), historyFromOf("monthly", today)].sort()[0];
 
-  const [categories, budgets, txs] = await Promise.all([
+  const [profile, categories, budgets, txs] = await Promise.all([
+    getProfile(),
     getCategories(supabase),
     getBudgets(supabase),
     getTransactionsInRange(supabase, historyFrom, today),
   ]);
   const expenseCats = categories.filter((c) => c.type === "expense");
-  const data = { today, txs, budgets, expenseCats };
+  const startDay = profile.month_start_day;
+  const data = { today, txs, budgets, expenseCats, startDay };
 
   return (
     <div className="grid gap-5">
       <PageHeader
         title="Anggaran"
-        description="Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan kalender."
+        description={startDay > 1 ? `Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan (mulai tanggal ${startDay}).` : "Batasi pengeluaran per minggu (Senin–Minggu) atau per bulan kalender."}
       />
       <BudgetTabs
         initial={initial}
@@ -71,7 +74,7 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
 function historyFromOf(type: BudgetPeriodType, today: string) {
   return type === "weekly"
     ? addDays(weekStart(today), -7 * HISTORY_COUNT.weekly)
-    : monthStart(addMonths(today, -HISTORY_COUNT.monthly));
+    : monthStart(addMonths(today, -(HISTORY_COUNT.monthly + 1)));
 }
 
 function BudgetPanel({
@@ -80,23 +83,25 @@ function BudgetPanel({
   txs,
   budgets,
   expenseCats,
+  startDay,
 }: {
   type: BudgetPeriodType;
   today: string;
   txs: TransactionLite[];
   budgets: Budget[];
   expenseCats: Category[];
+  startDay: number;
 }) {
-  const start = periodStartOf(type, today);
-  const end = periodEndOf(type, start);
-  const periodLabel = type === "weekly" ? formatRange(start, end) : formatMonthYear(start);
+  const start = periodStartOf(type, today, startDay);
+  const end = periodEndOf(type, start, startDay);
+  const periodLabel = type === "weekly" ? formatRange(start, end) : startDay > 1 ? formatRange(start, end) : formatCycle(start);
   const total = budgetStatus(spentInPeriod(txs, type, null, start, end), resolveLimit(budgets, type, null, start));
   const rows = expenseCats.map((c) => ({
     category: c,
     status: budgetStatus(spentInPeriod(txs, type, c.id, start, end), resolveLimit(budgets, type, c.id, start)),
     spent: spentInPeriod(txs, type, c.id, start, end),
   }));
-  const history = budgetHistory(budgets, txs, type, today, HISTORY_COUNT[type]);
+  const history = budgetHistory(budgets, txs, type, today, HISTORY_COUNT[type], startDay);
 
   return (
     <>
@@ -194,7 +199,7 @@ function BudgetPanel({
             <li key={h.start} className="grid gap-1.5 py-3 first:pt-0 last:pb-0">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-sm font-medium">
-                  {type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatMonthYear(h.start)}
+                  {type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatCycle(h.start, startDay)}
                 </p>
                 <p className={cn("text-xs font-semibold", LEVEL_CLS[h.status.level])}>
                   {LEVEL_TEXT[h.status.level]}
@@ -231,7 +236,7 @@ function BudgetPanel({
           <tbody className="divide-y">
             {history.map((h) => (
               <tr key={h.start}>
-                <td className="py-2.5">{type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatMonthYear(h.start)}</td>
+                <td className="py-2.5">{type === "weekly" ? `${formatDayMonth(h.start)} – ${formatDayMonth(h.end)}` : formatCycle(h.start, startDay)}</td>
                 <td className="py-2.5 text-right">{h.status.limit > 0 ? <Money value={h.status.limit} /> : "—"}</td>
                 <td className="py-2.5 text-right">
                   <Money value={h.status.spent} />
