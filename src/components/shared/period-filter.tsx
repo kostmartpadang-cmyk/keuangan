@@ -30,6 +30,9 @@ export function PeriodFilter({ basePath, period }: { basePath: string; period: P
   const [activeKey, setActiveKey] = useOptimistic<PeriodKey>(period.key);
   const [customOpen, setCustomOpen] = useState(period.key === "custom");
 
+  // Chip "Rentang khusus" menyala begitu diketuk (form terbuka) atau saat rentang khusus sedang dipakai.
+  const customOn = customOpen || activeKey === "custom";
+
   function go(key: PeriodKey, href: string) {
     startTransition(() => {
       setActiveKey(key);
@@ -46,14 +49,14 @@ export function PeriodFilter({ basePath, period }: { basePath: string; period: P
             <Link
               key={key}
               href={href}
-              aria-current={activeKey === key ? "true" : undefined}
+              aria-current={activeKey === key && !customOn ? "true" : undefined}
               onClick={(e) => {
                 if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
                 e.preventDefault();
                 setCustomOpen(false);
                 go(key, href);
               }}
-              className={chipCls(activeKey === key)}
+              className={chipCls(activeKey === key && !customOn)}
             >
               {PERIOD_LABELS[key]}
             </Link>
@@ -62,9 +65,9 @@ export function PeriodFilter({ basePath, period }: { basePath: string; period: P
         <button
           type="button"
           aria-expanded={customOpen}
-          aria-current={activeKey === "custom" ? "true" : undefined}
+          aria-current={customOn ? "true" : undefined}
           onClick={() => setCustomOpen((o) => !o)}
-          className={cn(chipCls(activeKey === "custom"), "inline-flex items-center gap-1.5")}
+          className={cn(chipCls(customOn), "inline-flex items-center gap-1.5")}
         >
           {pending && activeKey === "custom" && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
           {period.key === "custom" ? period.label : PERIOD_LABELS.custom}
